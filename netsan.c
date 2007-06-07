@@ -301,7 +301,12 @@ int main( int argc, char *argv[])
 						if (connect( rs, (struct sockaddr *)&sa, sizeof( sa)))
 						{
 							perror( "connect");
-							break;
+							close( cs);
+							cs = 0;
+							close( rs);
+							rs = 0;
+							printf( "FIXME: should break here ? %s:%d\n", __FILE__, __LINE__);
+//							break;
 						}
 						else if (tunnel && th)
 						{
