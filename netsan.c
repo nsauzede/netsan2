@@ -10,7 +10,12 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
-#define ARG_TUN	"--tunnel"
+#ifdef HAVE_SSL
+#include <openssl/ssl.h>
+#endif
+
+#define ARG_TUN	"-t"
+#define ARG_SSL	"-s"
 
 #define MAX_TH	1024
 
@@ -35,10 +40,13 @@ int isdignum( const char *str)
 
 int main( int argc, char *argv[])
 {
+	int tunnel = 0;
+#ifdef HAVE_SSL
+	int ssl = 0;
+#endif
 	int lp = 0;
 	char *rh = NULL;
 	int rp = 0;
-	int tunnel = 0;
 	char *th = NULL;
 	int tp = 0;
 	int err = 1;
@@ -62,6 +70,20 @@ int main( int argc, char *argv[])
 			arg++;
 			while (arg < argc)
 			{
+#ifdef HAVE_SSL
+				if (!strcmp( argv[arg], ARG_SSL))
+				{
+					arg++;
+					if (tunnel)
+						ssl = 1;
+					else
+					{
+						printf( "*** ssl available only with tunnel\n");
+						goto err;
+					}
+				}
+				else
+#endif
 				if (!strcmp( argv[arg], ARG_TUN))
 				{
 					arg++;
@@ -176,7 +198,11 @@ int main( int argc, char *argv[])
 			}
 			else if (th && tp)
 			{
-				printf( "{mux mode lp=%d rh=%s rp=%d tunnelling to th=%s tp=%d}\n", lp, rh, rp, th, tp);
+				printf( "{mux mode lp=%d rh=%s rp=%d %stunnelling to th=%s tp=%d}\n", lp, rh, rp,
+#ifdef HAVE_SSL
+				ssl ? "ssl/" :
+#endif
+				"", th, tp);
 				err = 0;
 			}
 		}
@@ -189,21 +215,16 @@ int main( int argc, char *argv[])
 			}
 			else if (!th && !tp)
 			{
-				printf( "{demux mode lp=%d, tunnelling}\n", lp);
+				printf( "{demux mode lp=%d, %stunnelling}\n", lp,
+#ifdef HAVE_SSL
+				ssl ? "ssl/" :
+#endif
+				"");
 				err = 0;
 			}
 		}
 	}
-	if (err)
-	{
-		printf( "Usage :\n");
-		printf( "        %s rh rp\t\t\tclient: connect to rh:rp\n", prog);
-		printf( "        %s lp\t\t\tserver: listen on lp\n", prog);
-		printf( "        %s lp rh rp\t\t\tproxy: bridge lp to rh:rp\n", prog);
-		printf( "        %s lp %s\t\tmux: demux lp to th:tp\n", prog, ARG_TUN);
-		printf( "        %s lp rh rp %s th tp\tmux: mux th:tp from lp to rh:rp\n", prog, ARG_TUN);
-	}
-	else
+	if (!err)
 	while (1)
 	{
 		fd_set rfds;
@@ -411,6 +432,20 @@ int main( int argc, char *argv[])
 				}
 			}
 		}
+	}
+	else
+	{
+		printf( "Usage :\n");
+		printf( "        %s rh rp\t\t\tclient: connect to rh:rp\n", prog);
+		printf( "        %s lp\t\t\tserver: listen on lp\n", prog);
+		printf( "        %s lp rh rp\t\tproxy: bridge lp to rh:rp\n", prog);
+#ifdef HAVE_SSL
+		printf( "        %s lp %s [%s]\t\tmux: demux lp to th:tp\n", prog, ARG_TUN, ARG_SSL);
+		printf( "        %s lp rh rp %s th tp [%s]\tmux: mux th:tp from lp to rh:rp\n", prog, ARG_TUN, ARG_SSL);
+#else
+		printf( "        %s lp %s\t\t\tmux: demux lp to th:tp\n", prog, ARG_TUN);
+		printf( "        %s lp rh rp %s th tp\tmux: mux th:tp from lp to rh:rp\n", prog, ARG_TUN);
+#endif
 	}
 
 err:
