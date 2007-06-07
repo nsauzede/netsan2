@@ -1,8 +1,6 @@
-#TARGET=	sock std pipe netsan
-TARGET=		sock std netsan
+TARGET=		netsan
 
 CFLAGS=		-Wall -Werror -O0 -g
-#LDFLAGS=	-lpthread
 
 all:	$(TARGET)
 

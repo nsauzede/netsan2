@@ -12,6 +12,8 @@
 
 #define ARG_TUN	"--tunnel"
 
+#define MAX_TH	1024
+
 int isdignum( const char *str)
 {
     int result = 0;
@@ -280,6 +282,16 @@ int main( int argc, char *argv[])
 							perror( "connect");
 							break;
 						}
+						else if (tunnel && th)
+						{
+							n = snprintf( buf, sizeof( buf), "CONNECT %s %d\n", th, tp);
+							if (n <= 0)
+							{
+								perror( "snprintf");
+								break;
+							}
+							n = write( rs, buf, n);
+						}
 					}
 				}
 			}
@@ -336,17 +348,55 @@ int main( int argc, char *argv[])
 				}
 				else			// user hit ctrl-d
 				{
-					if (cs)		// first, disc client
+					int must_break = 0;
+
+					if (!cs)
+						must_break = 1;
+					if (cs)		// disc client
 					{
 						close( cs);
 						cs = 0;
 					}
-					else
-						break;	// last, terminate
+					if (rs)		// disc server
+					{
+						close( rs);
+						rs = 0;
+					}
+					if (must_break)
+						break;	// terminate
 				}
 			}
 			else			// valid data to read
 			{
+				if (tunnel && !rs)
+				{
+					char host[MAX_TH];
+					int ok = 0;
+						
+					if (2 == sscanf( buf, "CONNECT %s %d\n", host, &tp))
+					{
+						rs = socket( PF_INET, SOCK_STREAM, 0);
+						memset( &sa, 0, sizeof( sa));
+						sa.sin_family = AF_INET;
+						sa.sin_port = htons( tp);
+						sa.sin_addr.s_addr = inet_addr( host);
+						if (!connect( rs, (struct sockaddr *)&sa, sizeof( sa)))
+						{
+							out = rs;
+							ok = 1;
+						}
+						else
+						{
+							perror( "connect");
+						}
+					}
+					if (!ok)
+					{
+						close( cs);
+						cs = 0;
+						printf( "<demux failed>\n");
+					}
+				}
 				if (out)
 				{
 					write( out, buf, n);
