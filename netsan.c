@@ -19,6 +19,18 @@
 
 #define MAX_TH	1024
 
+void asciify( char *ptr, int n)
+{
+	while (n > 0)
+	{
+		if ((*ptr < ' ') && (*ptr != '\t') && (*ptr != '\r') && (*ptr != '\n'))
+			*ptr = '.';
+		 ptr++;
+		 n--;
+	}
+	*ptr = 0;
+}
+
 int isdignum( const char *str)
 {
     int result = 0;
@@ -322,7 +334,7 @@ int main( int argc, char *argv[])
 				{
 					close( ls);
 					ls = 0;
-					printf( "closed local\n");
+					printf( "closed local ******\n");
 				}
 				else
 				{
@@ -448,8 +460,8 @@ int main( int argc, char *argv[])
 				{
 					if (n > (sizeof( buf) - 1))
 						n = sizeof( buf) - 1;
-					buf[n] = 0;
-#if 1
+					asciify( buf, n);
+#if 0
 					printf( "%d bytes [%s]\n", n, buf);
 #else
 					printf( "%s", buf);
