@@ -176,19 +176,6 @@ int main( int argc, char *argv[])
 	}
 	else
 	{
-		ls = socket( PF_INET, SOCK_STREAM, 0);
-		on = 1;
-		setsockopt( ls, SOL_SOCKET, SO_REUSEADDR, (const void *)&on, sizeof( on));
-		memset( &sa, 0, sizeof( sa));
-		sa.sin_family = AF_INET;
-		sa.sin_port = htons( lp);
-		sa.sin_addr.s_addr = INADDR_ANY;
-		if (bind( ls, (struct sockaddr *)&sa, sizeof( sa)))
-		{
-			perror( "bind");
-			goto err;
-		}
-		listen( ls, 1);
 		if (rh && rp && (!tunnel || (tunnel && th && tp)))
 		{
 			if (!tunnel)
@@ -232,6 +219,23 @@ int main( int argc, char *argv[])
 		int n;
 		char buf[1024];
 		int in = -1, out = 0;
+
+		if (!ls && !cs)			// create local server
+		{
+			ls = socket( PF_INET, SOCK_STREAM, 0);
+			on = 1;
+			setsockopt( ls, SOL_SOCKET, SO_REUSEADDR, (const void *)&on, sizeof( on));
+			memset( &sa, 0, sizeof( sa));
+			sa.sin_family = AF_INET;
+			sa.sin_port = htons( lp);
+			sa.sin_addr.s_addr = INADDR_ANY;
+			if (bind( ls, (struct sockaddr *)&sa, sizeof( sa)))
+			{
+				perror( "bind");
+				goto err;
+			}
+			listen( ls, 1);
+		}
 
 		FD_ZERO( &rfds);
 		FD_SET( 0, &rfds);
@@ -283,12 +287,6 @@ int main( int argc, char *argv[])
 		{
 			if (!cs)
 			{
-				cs = accept( ls, NULL, NULL);
-				if (cs == -1)
-				{
-					perror( "accept");
-					break;
-				}
 				if (rh)
 				{
 					if (!rs)
@@ -301,23 +299,38 @@ int main( int argc, char *argv[])
 						if (connect( rs, (struct sockaddr *)&sa, sizeof( sa)))
 						{
 							perror( "connect");
-							close( cs);
-							cs = 0;
 							close( rs);
 							rs = 0;
-							printf( "FIXME: should break here ? %s:%d\n", __FILE__, __LINE__);
-//							break;
+							printf( "closed remote\n");
 						}
-						else if (tunnel && th)
+						if (rs)
 						{
-							n = snprintf( buf, sizeof( buf), "CONNECT %s %d\n", th, tp);
-							if (n <= 0)
+							if (tunnel && th)
 							{
-								perror( "snprintf");
-								break;
+								n = snprintf( buf, sizeof( buf), "CONNECT %s %d\n", th, tp);
+								if (n <= 0)
+								{
+									perror( "snprintf");
+									break;
+								}
+								n = write( rs, buf, n);
 							}
-							n = write( rs, buf, n);
 						}
+					}
+				}
+				if (rh && !rs)
+				{
+					close( ls);
+					ls = 0;
+					printf( "closed local\n");
+				}
+				else
+				{
+					cs = accept( ls, NULL, NULL);
+					if (cs == -1)
+					{
+						perror( "accept");
+						break;
 					}
 				}
 			}
@@ -348,6 +361,7 @@ int main( int argc, char *argv[])
 				{
 					close( rs);
 					rs = 0;
+					printf( "closed remote\n");
 					if (cs)
 					{
 						close( cs);
@@ -382,11 +396,13 @@ int main( int argc, char *argv[])
 					{
 						close( cs);
 						cs = 0;
+						printf( "closed client\n");
 					}
 					if (rs)		// disc server
 					{
 						close( rs);
 						rs = 0;
+						printf( "closed remote\n");
 					}
 					if (must_break)
 						break;	// terminate
@@ -420,6 +436,7 @@ int main( int argc, char *argv[])
 					{
 						close( cs);
 						cs = 0;
+						printf( "closed client\n");
 						printf( "<demux failed>\n");
 					}
 				}
@@ -432,8 +449,11 @@ int main( int argc, char *argv[])
 					if (n > (sizeof( buf) - 1))
 						n = sizeof( buf) - 1;
 					buf[n] = 0;
-//					printf( "%d bytes [%s]\n", n, buf);
+#if 1
+					printf( "%d bytes [%s]\n", n, buf);
+#else
 					printf( "%s", buf);
+#endif
 				}
 			}
 		}
