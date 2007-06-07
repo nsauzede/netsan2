@@ -54,7 +54,11 @@ int main( int argc, char *argv[])
 {
 	int tunnel = 0;
 #ifdef HAVE_SSL
-	int ssl = 0;
+	int use_ssl = 0;
+	char *key = NULL;
+	char *cert = NULL;
+	SSL_CTX *ssl_ctx = NULL;
+	SSL *ssl = NULL;
 #endif
 	int lp = 0;
 	char *rh = NULL;
@@ -87,7 +91,30 @@ int main( int argc, char *argv[])
 				{
 					arg++;
 					if (tunnel)
-						ssl = 1;
+					{
+						if (!th)		// mandatory args : key cert
+						{
+							if (arg < argc)
+							{
+								key = argv[arg++];
+								if (arg < argc)
+								{
+									cert = argv[arg++];
+								}
+								else
+								{
+									printf( "*** missing cert\n");
+									goto err;
+								}
+							}
+							else
+							{
+								printf( "*** missing key\n");
+								goto err;
+							}
+						}
+						use_ssl = 1;
+					}
 					else
 					{
 						printf( "*** ssl available only with tunnel\n");
@@ -165,6 +192,14 @@ int main( int argc, char *argv[])
 	}
 //	printf( "got lp=%d rh=%s rp=%d tunnel=%d th=%s tp=%d\n", lp, rh, rp, tunnel, th, tp);
 
+#ifdef HAVE_SSL
+	if (use_ssl)
+	{
+		SSL_library_init();
+		SSL_load_error_strings();
+	}
+#endif
+
 	if (!lp)
 	{
 		if (rh && rp && !tunnel)
@@ -199,7 +234,7 @@ int main( int argc, char *argv[])
 			{
 				printf( "{mux mode lp=%d rh=%s rp=%d %stunnelling to th=%s tp=%d}\n", lp, rh, rp,
 #ifdef HAVE_SSL
-				ssl ? "ssl/" :
+				use_ssl ? "ssl/" :
 #endif
 				"", th, tp);
 				err = 0;
@@ -214,16 +249,17 @@ int main( int argc, char *argv[])
 			}
 			else if (!th && !tp)
 			{
-				printf( "{demux mode lp=%d, %stunnelling}\n", lp,
 #ifdef HAVE_SSL
-				ssl ? "ssl/" :
+				printf( "{demux mode lp=%d, %stunnelling%s%s%s%s}\n", lp, use_ssl ? "ssl/" : "", use_ssl && !th ? " key=" : "", use_ssl && !th ? key : "", use_ssl && !th ? " cert=" : "", use_ssl && !th ? cert : "");
+#else
+				printf( "{demux mode lp=%d, tunnelling}\n", lp);
 #endif
-				"");
 				err = 0;
 			}
 		}
 	}
 	if (!err)
+	{
 	while (1)
 	{
 		fd_set rfds;
@@ -244,7 +280,7 @@ int main( int argc, char *argv[])
 			if (bind( ls, (struct sockaddr *)&sa, sizeof( sa)))
 			{
 				perror( "bind");
-				goto err;
+				break;
 			}
 			listen( ls, 1);
 		}
@@ -315,6 +351,46 @@ int main( int argc, char *argv[])
 							rs = 0;
 							printf( "closed remote\n");
 						}
+#ifdef HAVE_SSL
+						else
+						{
+							int ok = 0;
+
+							if (use_ssl)
+							{
+								ssl_ctx = SSL_CTX_new( SSLv23_client_method());
+								if (ssl_ctx)
+								{
+									ssl = SSL_new( ssl_ctx);
+									if (ssl)
+									{
+										if (SSL_set_fd( ssl, rs))
+										{
+											n = SSL_connect( ssl);
+											if (n == 1)
+											{
+												printf( "SSL initiated\n");
+												OK = 1;
+											}
+										}
+									}
+								}
+							}
+							if (!ok)
+							{
+								if (ssl)
+								{
+									SSL_shutdown( ssl);
+									ssl = NULL;
+								}
+								if (ssl_ctx)
+								{
+									SSL_CTX_free( ssl_ctx);
+									ssl_ctx = NULL;
+								}
+							}
+						}
+#endif
 						if (rs)
 						{
 							if (tunnel && th)
@@ -325,6 +401,11 @@ int main( int argc, char *argv[])
 									perror( "snprintf");
 									break;
 								}
+#ifdef HAVE_SSL
+								if (ssl)
+									n = SSL_write( ssl, buf, n);
+								else
+#endif
 								n = write( rs, buf, n);
 							}
 						}
@@ -436,6 +517,16 @@ int main( int argc, char *argv[])
 						sa.sin_addr.s_addr = inet_addr( host);
 						if (!connect( rs, (struct sockaddr *)&sa, sizeof( sa)))
 						{
+							int size;
+							char *ptr;
+
+							ptr = strchr( buf, '\n');
+							if (ptr)
+							{
+								size = n - ((int)ptr + 1 - (int)buf);
+								memcpy( buf, ptr + 1, size);
+								n = size;
+							}
 							out = rs;
 							ok = 1;
 						}
@@ -470,21 +561,6 @@ int main( int argc, char *argv[])
 			}
 		}
 	}
-	else
-	{
-		printf( "Usage :\n");
-		printf( "        %s rh rp\t\t\tclient: connect to rh:rp\n", prog);
-		printf( "        %s lp\t\t\tserver: listen on lp\n", prog);
-		printf( "        %s lp rh rp\t\tproxy: bridge lp to rh:rp\n", prog);
-#ifdef HAVE_SSL
-		printf( "        %s lp %s [%s]\t\tmux: demux lp to th:tp\n", prog, ARG_TUN, ARG_SSL);
-		printf( "        %s lp rh rp %s th tp [%s]\tmux: mux th:tp from lp to rh:rp\n", prog, ARG_TUN, ARG_SSL);
-#else
-		printf( "        %s lp %s\t\t\tmux: demux lp to th:tp\n", prog, ARG_TUN);
-		printf( "        %s lp rh rp %s th tp\tmux: mux th:tp from lp to rh:rp\n", prog, ARG_TUN);
-#endif
-	}
-
 err:
 
 	printf( "[close :");
@@ -504,6 +580,22 @@ err:
 		printf( " cs");
 	}
 	printf( " ]\n");
+
+	}
+	else
+	{
+		printf( "Usage :\n");
+		printf( "        %s rh rp\t\t\tclient: connect to rh:rp\n", prog);
+		printf( "        %s lp\t\t\tserver: listen on lp\n", prog);
+		printf( "        %s lp rh rp\t\tproxy: bridge lp to rh:rp\n", prog);
+#ifdef HAVE_SSL
+		printf( "        %s lp %s [%s key cert]\tdemux: bridge lp to {th:tp}\n", prog, ARG_TUN, ARG_SSL);
+		printf( "        %s lp rh rp %s th tp [%s]\tmux: dispatch th:tp from lp to rh:rp\n", prog, ARG_TUN, ARG_SSL);
+#else
+		printf( "        %s lp %s\t\t\tdemux: bridge lp to {th:tp}\n", prog, ARG_TUN);
+		printf( "        %s lp rh rp %s th tp\tmux: dispatch th:tp from lp to rh:rp\n", prog, ARG_TUN);
+#endif
+	}
 
 	return 0;
 }

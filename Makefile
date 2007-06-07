@@ -18,6 +18,15 @@ sslc:	LDFLAGS+=-lssl
 
 all:	$(TARGET)
 
+test.key:
+	openssl genrsa > $@
+
+test.csr:	test.key
+	openssl req -new -key test.key > $@
+
+test.crt:	test.key test.csr
+	openssl x509 -req -days 365 -in test.csr -signkey test.key -out $@
+
 clean:
 	$(RM) $(TARGET) *.o
 
