@@ -618,6 +618,7 @@ int main( int argc, char *argv[])
 			{
 				if (in && (in == rs))
 				{
+#ifdef HAVE_SSL
 					if (ssl)
 					{
 						SSL_shutdown( ssl);
@@ -627,6 +628,7 @@ int main( int argc, char *argv[])
 						if (verbose >= VERBOSE_DEBUG)
 						printf( ">>>SSL closed\n");
 					}
+#endif
 					close( rs);
 					rs = 0;
 					if (verbose >= VERBOSE_DEBUG)
@@ -647,6 +649,7 @@ int main( int argc, char *argv[])
 				}
 				else if (in && (in == cs))
 				{
+#ifdef HAVE_SSL
 					if (ssl)
 					{
 						SSL_shutdown( ssl);
@@ -656,6 +659,7 @@ int main( int argc, char *argv[])
 						if (verbose >= VERBOSE_DEBUG)
 						printf( ">>>SSL closed\n");
 					}
+#endif
 					if (rs)
 					{
 						close( rs);
@@ -676,6 +680,7 @@ int main( int argc, char *argv[])
 						must_break = 1;
 					if (cs)		// disc client
 					{
+#ifdef HAVE_SSL
 						if (ssl && !rh)
 						{
 							SSL_shutdown( ssl);
@@ -685,6 +690,7 @@ int main( int argc, char *argv[])
 							if (verbose >= VERBOSE_DEBUG)
 							printf( ">>>SSL closed\n");
 						}
+#endif
 						close( cs);
 						cs = 0;
 						if (verbose >= VERBOSE_DEBUG)
@@ -692,6 +698,7 @@ int main( int argc, char *argv[])
 					}
 					if (rs)		// disc server
 					{
+#ifdef HAVE_SSL
 						if (ssl && rh)
 						{
 							SSL_shutdown( ssl);
@@ -701,6 +708,7 @@ int main( int argc, char *argv[])
 							if (verbose >= VERBOSE_DEBUG)
 							printf( ">>>SSL closed\n");
 						}
+#endif
 						close( rs);
 						rs = 0;
 						if (verbose >= VERBOSE_DEBUG)
