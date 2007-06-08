@@ -12,12 +12,16 @@
 
 #ifdef HAVE_SSL
 #include <openssl/ssl.h>
+#include <openssl/err.h>
 #endif
 
-#define ARG_TUN	"-t"
-#define ARG_SSL	"-s"
+#define ARG_TUN		"-t"
+#define ARG_SSL		"-s"
+#define ARG_VERBOSE	"-v"
 
 #define MAX_TH	1024
+
+enum { VERBOSE_NONE, VERBOSE_INFO, VERBOSE_DEBUG };
 
 void asciify( char *ptr, int n)
 {
@@ -69,6 +73,8 @@ int main( int argc, char *argv[])
 //	char *prog = basename( argv[0]);
 	char *prog = argv[0];
 	int arg = 1;
+//	int verbose = VERBOSE_NONE;
+	int verbose = VERBOSE_INFO;
 
 	int ls = 0, rs = 0, cs = 0;
 	struct sockaddr_in sa;
@@ -190,6 +196,14 @@ int main( int argc, char *argv[])
 			}
 		}
 	}
+	while (arg < argc)
+	{
+		if (!strcmp( argv[arg], ARG_VERBOSE))
+		{
+			arg++;
+			verbose++;
+		}
+	}
 //	printf( "got lp=%d rh=%s rp=%d tunnel=%d th=%s tp=%d\n", lp, rh, rp, tunnel, th, tp);
 
 #ifdef HAVE_SSL
@@ -197,6 +211,8 @@ int main( int argc, char *argv[])
 	{
 		SSL_library_init();
 		SSL_load_error_strings();
+		if (verbose >= VERBOSE_DEBUG)
+		printf( ">>>SSL inited\n");
 	}
 #endif
 
@@ -211,6 +227,7 @@ int main( int argc, char *argv[])
 			sa.sin_addr.s_addr = inet_addr( rh);
 			if (!connect( rs, (struct sockaddr *)&sa, sizeof( sa)))
 			{
+//				if (verbose >= VERBOSE_INFO)
 				printf( "{client mode rh=%s rp=%d}\n", rh, rp);
 				err = 0;
 			}
@@ -227,11 +244,13 @@ int main( int argc, char *argv[])
 		{
 			if (!tunnel)
 			{
+				if (verbose >= VERBOSE_INFO)
 				printf( "{proxy mode lp=%d rh=%s rp=%d}\n", lp, rh, rp);
 				err = 0;
 			}
 			else if (th && tp)
 			{
+				if (verbose >= VERBOSE_INFO)
 				printf( "{mux mode lp=%d rh=%s rp=%d %stunnelling to th=%s tp=%d}\n", lp, rh, rp,
 #ifdef HAVE_SSL
 				use_ssl ? "ssl/" :
@@ -244,11 +263,13 @@ int main( int argc, char *argv[])
 		{
 			if (!tunnel)
 			{
+				if (verbose >= VERBOSE_INFO)
 				printf( "{server mode lp=%d}\n", lp);
 				err = 0;
 			}
 			else if (!th && !tp)
 			{
+				if (verbose >= VERBOSE_INFO)
 #ifdef HAVE_SSL
 				printf( "{demux mode lp=%d, %stunnelling%s%s%s%s}\n", lp, use_ssl ? "ssl/" : "", use_ssl && !th ? " key=" : "", use_ssl && !th ? key : "", use_ssl && !th ? " cert=" : "", use_ssl && !th ? cert : "");
 #else
@@ -268,8 +289,18 @@ int main( int argc, char *argv[])
 		char buf[1024];
 		int in = -1, out = 0;
 
-		if (!ls && !cs)			// create local server
+		static int count = 0;
+
+		if (count++ > 10)
 		{
+//			printf( "+++++watchdog\n");
+//			break;
+		}
+
+		if (!ls && lp)			// create local server
+		{
+			if (verbose >= VERBOSE_DEBUG)
+			printf( "||||creating local server\n");
 			ls = socket( PF_INET, SOCK_STREAM, 0);
 			on = 1;
 			setsockopt( ls, SOL_SOCKET, SO_REUSEADDR, (const void *)&on, sizeof( on));
@@ -287,9 +318,11 @@ int main( int argc, char *argv[])
 
 		FD_ZERO( &rfds);
 		FD_SET( 0, &rfds);
+		if (verbose >= VERBOSE_DEBUG)
 		printf( "[select : 0");
 		if (ls)
 		{
+			if (verbose >= VERBOSE_DEBUG)
 			printf( " ls");
 			FD_SET( ls, &rfds);
 			if (ls > max)
@@ -297,6 +330,7 @@ int main( int argc, char *argv[])
 		}
 		if (rs)
 		{
+			if (verbose >= VERBOSE_DEBUG)
 			printf( " rs");
 			FD_SET( rs, &rfds);
 			if (rs > max)
@@ -304,11 +338,13 @@ int main( int argc, char *argv[])
 		}
 		if (cs)
 		{
+			if (verbose >= VERBOSE_DEBUG)
 			printf( " cs");
 			FD_SET( cs, &rfds);
 			if (cs > max)
 				max = cs;
 		}
+		if (verbose >= VERBOSE_DEBUG)
 		printf( " ]\n");
 		max++;
 		n = select( max, &rfds, NULL, NULL, NULL);
@@ -333,12 +369,16 @@ int main( int argc, char *argv[])
 		}
 		else if (ls && FD_ISSET( ls, &rfds))
 		{
+			if (verbose >= VERBOSE_DEBUG)
+			printf( "--- sg to read in ls\n");
 			if (!cs)
 			{
 				if (rh)
 				{
 					if (!rs)
 					{
+						if (verbose >= VERBOSE_DEBUG)
+						printf( "trying to connect rs to %s:%d\n", rh, rp);
 						rs = socket( PF_INET, SOCK_STREAM, 0);
 						memset( &sa, 0, sizeof( sa));
 						sa.sin_family = AF_INET;
@@ -349,29 +389,41 @@ int main( int argc, char *argv[])
 							perror( "connect");
 							close( rs);
 							rs = 0;
+							if (verbose >= VERBOSE_DEBUG)
 							printf( "closed remote\n");
 						}
 #ifdef HAVE_SSL
-						else
+						else if (use_ssl && rh)
 						{
 							int ok = 0;
 
-							if (use_ssl)
+							ssl_ctx = SSL_CTX_new( SSLv23_client_method());
+							if (ssl_ctx)
 							{
-								ssl_ctx = SSL_CTX_new( SSLv23_client_method());
-								if (ssl_ctx)
+								if (verbose >= VERBOSE_DEBUG)
+								printf( ">>>SSL CTX created\n");
+								ssl = SSL_new( ssl_ctx);
+								if (ssl)
 								{
-									ssl = SSL_new( ssl_ctx);
-									if (ssl)
+									if (verbose >= VERBOSE_DEBUG)
+									printf( ">>>SSL created\n");
+									if (SSL_set_fd( ssl, rs))
 									{
-										if (SSL_set_fd( ssl, rs))
+										if (verbose >= VERBOSE_DEBUG)
+										printf( ">>>SSL fd set\n");
+										n = SSL_connect( ssl);
+										if (verbose >= VERBOSE_DEBUG)
+										printf( ">>>SSL connect returned %d\n", n);
+										if (n == 1)
 										{
-											n = SSL_connect( ssl);
-											if (n == 1)
-											{
-												printf( "SSL initiated\n");
-												OK = 1;
-											}
+											if (verbose >= VERBOSE_DEBUG)
+											printf( ">>>SSL connected\n");
+											ok = 1;
+										}
+										else
+										{
+											unsigned long err = ERR_get_error();
+											printf( ">>>SSL err : %d,%d %lu,%s\n", n, SSL_get_error( ssl, n), err, ERR_error_string( err, NULL));
 										}
 									}
 								}
@@ -382,11 +434,20 @@ int main( int argc, char *argv[])
 								{
 									SSL_shutdown( ssl);
 									ssl = NULL;
+									if (verbose >= VERBOSE_DEBUG)
+									printf( ">>>SSL shutdown\n");
 								}
 								if (ssl_ctx)
 								{
 									SSL_CTX_free( ssl_ctx);
 									ssl_ctx = NULL;
+									if (verbose >= VERBOSE_DEBUG)
+									printf( ">>>SSL CTX freed\n");
+								}
+								if (rs)
+								{
+									close( rs);
+									rs = 0;
 								}
 							}
 						}
@@ -403,81 +464,209 @@ int main( int argc, char *argv[])
 								}
 #ifdef HAVE_SSL
 								if (ssl)
+								{
+									if (verbose >= VERBOSE_DEBUG)
+									printf( ">>>SSL about to write\n");
 									n = SSL_write( ssl, buf, n);
+								}
 								else
 #endif
+								{
+								if (verbose >= VERBOSE_DEBUG)
+								printf( "about to write..\n");
 								n = write( rs, buf, n);
+								}
 							}
 						}
 					}
 				}
+
 				if (rh && !rs)
 				{
 					close( ls);
 					ls = 0;
-					printf( "closed local ******\n");
+					if (verbose >= VERBOSE_DEBUG)
+					printf( "|||closed local\n");
 				}
 				else
 				{
+					if (verbose >= VERBOSE_DEBUG)
+					printf( "accepting cs..\n");
 					cs = accept( ls, NULL, NULL);
 					if (cs == -1)
 					{
 						perror( "accept");
 						break;
 					}
+#ifdef HAVE_SSL
+					if (use_ssl && !rh)
+					{
+						int ok = 0;
+
+						ssl_ctx = SSL_CTX_new( SSLv23_server_method());
+						if (ssl_ctx)
+						{
+							ssl = SSL_new( ssl_ctx);
+							if (ssl)
+							{
+								n = SSL_use_PrivateKey_file( ssl, key, 1);
+								if (verbose >= VERBOSE_DEBUG)
+								printf( ">>>SSL use key returned %d\n", n);
+								n = SSL_use_certificate_file( ssl, cert, 1);
+								if (verbose >= VERBOSE_DEBUG)
+								printf( ">>>SSL use cert returned %d\n", n);
+								if (SSL_set_fd( ssl, cs))
+								{
+									n = SSL_accept( ssl);
+									if (verbose >= VERBOSE_DEBUG)
+									printf( ">>>SSL accept returned %d\n", n);
+									if (n == 1)
+										ok = 1;
+									else
+									{
+										unsigned long err = ERR_get_error();
+
+										printf( ">>>SSL err : %d,%d %lu,%s\n", n, SSL_get_error( ssl, n), err, ERR_error_string( err, NULL));
+									}
+								}
+							}
+						}
+						if (!ok)
+						{
+							if (ssl)
+							{
+								SSL_shutdown( ssl);
+								ssl = NULL;
+								if (verbose >= VERBOSE_DEBUG)
+								printf( ">>>SSL shutdown\n");
+							}
+							if (ssl_ctx)
+							{
+								SSL_CTX_free( ssl_ctx);
+								ssl_ctx = NULL;
+								if (verbose >= VERBOSE_DEBUG)
+								printf( ">>>SSL CTX free\n");
+							}
+							if (cs)
+							{
+								close( cs);
+								cs = 0;
+								if (verbose >= VERBOSE_DEBUG)
+								printf( "closed client\n");
+							}
+						}
+						else
+						{
+							printf( "[accepted client]\n");
+						}
+					}
+					else
+					{
+						printf( "[accepted client]\n");
+					}
+#endif
 				}
 			}
 		}
 		else if (rs && FD_ISSET( rs, &rfds))
         {
+			if (verbose >= VERBOSE_DEBUG)
+			printf( "--- sg to read in rs\n");
             in = rs;
             if (cs)
                 out = cs;
         }
 		else if (cs && FD_ISSET( cs, &rfds))
         {
+			if (verbose >= VERBOSE_DEBUG)
+			printf( "--- sg to read in cs\n");
             in = cs;
             if (rs)
                 out = rs;
         }
 		if (in >= 0)
 		{
-			n = read( in, buf, sizeof( buf));
-			if (n < 0)		// read error
+#ifdef HAVE_SSL
+			if (ssl && (((in == rs) && rh) || ((in == cs) && !rh)))
 			{
-				perror( "read");
-				break;
+				if (verbose >= VERBOSE_DEBUG)
+				printf( ">>>SSL about to read\n");
+				n = SSL_read( ssl, buf, sizeof( buf));
+				if (verbose >= VERBOSE_DEBUG)
+				printf( ">>>SSL read returned %d\n", n);
+				if (n < 0)		// read error
+				{
+					unsigned long err = ERR_get_error();
+
+					printf( ">>>SSL***%d,%d %lu,%s\n", n, SSL_get_error( ssl, n), err, ERR_error_string( err, NULL));
+					break;
+				}
 			}
-			else if (!n)	// remote closed
+			else
+#endif
+			{
+				if (verbose >= VERBOSE_DEBUG)
+				printf( "about to read..\n");
+				n = read( in, buf, sizeof( buf));
+				if (n < 0)		// read error
+				{
+					perror( "read");
+					break;
+				}
+			}
+			if (!n)	// remote closed
 			{
 				if (in && (in == rs))
 				{
+					if (ssl)
+					{
+						SSL_shutdown( ssl);
+						ssl = 0;
+						SSL_CTX_free( ssl_ctx);
+						ssl_ctx = 0;
+						if (verbose >= VERBOSE_DEBUG)
+						printf( ">>>SSL closed\n");
+					}
 					close( rs);
 					rs = 0;
+					if (verbose >= VERBOSE_DEBUG)
 					printf( "closed remote\n");
 					if (cs)
 					{
 						close( cs);
 						cs = 0;
+						if (verbose >= VERBOSE_DEBUG)
 						printf( "closed client\n");
 					}
 					else
 					{
-						printf( "server left\n");
+//						if (verbose >= VERBOSE_DEBUG)
+						printf( "[server left]\n");
 						break;
 					}
 				}
 				else if (in && (in == cs))
 				{
+					if (ssl)
+					{
+						SSL_shutdown( ssl);
+						ssl = 0;
+						SSL_CTX_free( ssl_ctx);
+						ssl_ctx = 0;
+						if (verbose >= VERBOSE_DEBUG)
+						printf( ">>>SSL closed\n");
+					}
 					if (rs)
 					{
 						close( rs);
 						rs = 0;
+						if (verbose >= VERBOSE_DEBUG)
 						printf( "closed server\n");
 					}
 					close( cs);
 					cs = 0;
-					printf( "client left\n");
+//					if (verbose >= VERBOSE_DEBUG)
+					printf( "[client left]\n");
 				}
 				else			// user hit ctrl-d
 				{
@@ -487,14 +676,34 @@ int main( int argc, char *argv[])
 						must_break = 1;
 					if (cs)		// disc client
 					{
+						if (ssl && !rh)
+						{
+							SSL_shutdown( ssl);
+							ssl = 0;
+							SSL_CTX_free( ssl_ctx);
+							ssl_ctx = 0;
+							if (verbose >= VERBOSE_DEBUG)
+							printf( ">>>SSL closed\n");
+						}
 						close( cs);
 						cs = 0;
+						if (verbose >= VERBOSE_DEBUG)
 						printf( "closed client\n");
 					}
 					if (rs)		// disc server
 					{
+						if (ssl && rh)
+						{
+							SSL_shutdown( ssl);
+							ssl = 0;
+							SSL_CTX_free( ssl_ctx);
+							ssl_ctx = 0;
+							if (verbose >= VERBOSE_DEBUG)
+							printf( ">>>SSL closed\n");
+						}
 						close( rs);
 						rs = 0;
+						if (verbose >= VERBOSE_DEBUG)
 						printf( "closed remote\n");
 					}
 					if (must_break)
@@ -510,6 +719,8 @@ int main( int argc, char *argv[])
 						
 					if (2 == sscanf( buf, "CONNECT %s %d\n", host, &tp))
 					{
+						if (verbose >= VERBOSE_DEBUG)
+						printf( "+++tunnel about to connect rs to %s:%d\n", host, tp);
 						rs = socket( PF_INET, SOCK_STREAM, 0);
 						memset( &sa, 0, sizeof( sa));
 						sa.sin_family = AF_INET;
@@ -537,15 +748,37 @@ int main( int argc, char *argv[])
 					}
 					if (!ok)
 					{
+						if (rs)
+						{
+							close( rs);
+							rs = 0;
+							if (verbose >= VERBOSE_DEBUG)
+							printf( "closed remote\n");
+						}
 						close( cs);
 						cs = 0;
+						if (verbose >= VERBOSE_DEBUG)
 						printf( "closed client\n");
+						if (verbose >= VERBOSE_DEBUG)
 						printf( "<demux failed>\n");
 					}
 				}
 				if (out)
 				{
+#ifdef HAVE_SSL
+					if (ssl && (((out == rs) && rh) ||((out == cs) && !rh)))
+					{
+						if (verbose >= VERBOSE_DEBUG)
+						printf( ">>>SSL about to write\n");
+						SSL_write( ssl, buf, n);
+					}
+					else
+#endif
+					{
+					if (verbose >= VERBOSE_DEBUG)
+					printf( "about to write...\n");
 					write( out, buf, n);
+					}
 				}
 				if (in)
 				{
@@ -563,22 +796,27 @@ int main( int argc, char *argv[])
 	}
 err:
 
+	if (verbose >= VERBOSE_DEBUG)
 	printf( "[close :");
 	if (ls)
 	{
 		close( ls);
+		if (verbose >= VERBOSE_DEBUG)
 		printf( " ls");
 	}
 	if (rs)
 	{
 		close( rs);
+		if (verbose >= VERBOSE_DEBUG)
 		printf( " rs");
 	}
 	if (cs)
 	{
 		close( cs);
+		if (verbose >= VERBOSE_DEBUG)
 		printf( " cs");
 	}
+	if (verbose >= VERBOSE_DEBUG)
 	printf( " ]\n");
 
 	}
