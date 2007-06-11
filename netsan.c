@@ -162,6 +162,8 @@ int main( int argc, char *argv[])
 				}
 				else
 				{
+					if (argv[arg][0] == '-')
+						break;
 					rh = argv[arg++];
 					if (arg < argc)
 					{
@@ -177,7 +179,7 @@ int main( int argc, char *argv[])
 				}
 			}
 		}
-		else
+		else if (argv[arg][0] != '-')
 		{
 			rh = argv[arg++];
 			if (arg < argc)
