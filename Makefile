@@ -11,13 +11,9 @@ endif
 CFLAGS=		-Wall -Werror -O0 -g
 
 ifdef OS_WIN32
-LIBYACAPI=	/home/sauzeden/hg/libyacapi
-CFLAGS+=	-I/opt/include
+LIBYACAPI=	/home/sauzeden/tmp/build-libyacapi/install
 CFLAGS+=	-I$(LIBYACAPI)/include/compat
-LDFLAGS+=	-L$(LIBYACAPI)/build/.libs -lyacapi -lws2_32
-ifdef OS_WIN32
-LDFLAGS+=	-L/opt/lib
-endif
+LDFLAGS+=	-L$(LIBYACAPI)/lib -lyacapi -lws2_32
 endif
 
 ifdef SSL

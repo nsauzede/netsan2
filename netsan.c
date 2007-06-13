@@ -79,6 +79,7 @@ int main( int argc, char *argv[])
 	int ls = 0, rs = 0, cs = 0;
 	struct sockaddr_in sa;
 	int on;
+	struct hostent *he;
 
 	if (arg < argc)
 	{
@@ -226,7 +227,11 @@ int main( int argc, char *argv[])
 			memset( &sa, 0, sizeof( sa));
 			sa.sin_family = AF_INET;
 			sa.sin_port = htons( rp);
-			sa.sin_addr.s_addr = inet_addr( rh);
+			he = gethostbyname( rh);
+			if (he)
+				memcpy( &sa.sin_addr.s_addr, he->h_addr, sizeof( sa.sin_addr.s_addr));
+			else
+				sa.sin_addr.s_addr = inet_addr( rh);
 			if (!connect( rs, (struct sockaddr *)&sa, sizeof( sa)))
 			{
 //				if (verbose >= VERBOSE_INFO)
