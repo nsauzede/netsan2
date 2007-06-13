@@ -204,9 +204,9 @@ int main( int argc, char *argv[])
 	{
 		if (!strcmp( argv[arg], ARG_VERBOSE))
 		{
-			arg++;
 			verbose++;
 		}
+		arg++;
 	}
 //	printf( "got lp=%d rh=%s rp=%d tunnel=%d th=%s tp=%d\n", lp, rh, rp, tunnel, th, tp);
 
