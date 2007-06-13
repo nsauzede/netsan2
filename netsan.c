@@ -391,7 +391,11 @@ int main( int argc, char *argv[])
 						memset( &sa, 0, sizeof( sa));
 						sa.sin_family = AF_INET;
 						sa.sin_port = htons( rp);
-						sa.sin_addr.s_addr = inet_addr( rh);
+						he = gethostbyname( rh);
+						if (he)
+							memcpy( &sa.sin_addr.s_addr, he->h_addr, sizeof( sa.sin_addr.s_addr));
+						else
+							sa.sin_addr.s_addr = inet_addr( rh);
 						if (connect( rs, (struct sockaddr *)&sa, sizeof( sa)))
 						{
 							perror( "connect");
@@ -741,7 +745,11 @@ int main( int argc, char *argv[])
 						memset( &sa, 0, sizeof( sa));
 						sa.sin_family = AF_INET;
 						sa.sin_port = htons( tp);
-						sa.sin_addr.s_addr = inet_addr( host);
+						he = gethostbyname( host);
+						if (he)
+							memcpy( &sa.sin_addr.s_addr, he->h_addr, sizeof( sa.sin_addr.s_addr));
+						else
+							sa.sin_addr.s_addr = inet_addr( host);
 						if (!connect( rs, (struct sockaddr *)&sa, sizeof( sa)))
 						{
 							int size;
@@ -750,7 +758,7 @@ int main( int argc, char *argv[])
 							ptr = strchr( buf, '\n');
 							if (ptr)
 							{
-								size = n - ((int)ptr + 1 - (int)buf);
+								size = n - ((long)ptr + 1 - (long)buf);
 								memcpy( buf, ptr + 1, size);
 								n = size;
 							}
