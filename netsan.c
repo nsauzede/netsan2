@@ -70,8 +70,8 @@ int main( int argc, char *argv[])
 	char *th = NULL;
 	int tp = 0;
 	int err = 1;
-//	char *prog = basename( argv[0]);
-	char *prog = argv[0];
+	char *prog = basename( argv[0]);
+//	char *prog = argv[0];
 	int arg = 1;
 //	int verbose = VERBOSE_NONE;
 	int verbose = VERBOSE_INFO;

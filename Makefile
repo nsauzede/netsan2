@@ -1,6 +1,24 @@
-TARGET=		netsan ssl ssls sslc sun
+ifneq ($(strip $(shell $(CC) -v 2>&1 | grep "mingw")),)
+OS_WIN32=true
+endif
+
+TARGET=		netsan
+
+ifdef WIN32
+TARGET+= ssl sun ssls sslc
+endif
 
 CFLAGS=		-Wall -Werror -O0 -g
+
+ifdef OS_WIN32
+LIBYACAPI=	/home/sauzeden/hg/libyacapi
+CFLAGS+=	-I/opt/include
+CFLAGS+=	-I$(LIBYACAPI)/include/compat
+LDFLAGS+=	-L$(LIBYACAPI)/build/.libs -lyacapi -lws2_32
+ifdef OS_WIN32
+LDFLAGS+=	-L/opt/lib
+endif
+endif
 
 ifdef SSL
 CFLAGS+=	-DHAVE_SSL
@@ -16,6 +34,12 @@ ssls:	LDFLAGS+=-lssl
 
 sslc:	CFLAGS+=-DOPENSSL_NO_KRB5
 sslc:	LDFLAGS+=-lssl
+
+netsan:	netsan.c
+	$(CC) -o $@ $(CFLAGS) $^ $(LDFLAGS)
+
+%:	%.c
+	$(CC) -o $@ $(CFLAGS) $^ $(LDFLAGS)
 
 all:	$(TARGET)
 
