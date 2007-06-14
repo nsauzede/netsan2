@@ -17,7 +17,9 @@
 #endif
 
 #define ARG_TUN		"-t"
+#ifdef HAVE_SSL
 #define ARG_SSL		"-s"
+#endif
 #define ARG_PROX	"-p"
 #define ARG_AUTH	"-a"
 #define ARG_VERBOSE	"-v"
@@ -211,6 +213,15 @@ int main( int argc, char *argv[])
 						goto err;
 					}
 				}
+				if (lp)
+				{
+					tunnels = 1;
+				}
+				else
+				{
+					printf( "*** needs lp and/or rh\n");
+					goto err;
+				}
 			}
 			else if (!strcmp( argv[arg], ARG_PROX))
 			{
@@ -263,6 +274,8 @@ int main( int argc, char *argv[])
 	if (verbose >= VERBOSE_DEBUG)
 #ifdef HAVE_SSL
 	printf( "got lp=%d ssls=%d key=%s cert=%d tunnels=%d rh=%s rp=%d sslc=%d tunnelc=%d th=%s tp=%d proxy=%d ph=%s pp=%d auth=%s\n", lp, use_ssls, key, cert, tunnels, rh, rp, use_sslc, tunnelc, th, tp, proxy, ph, pp, auth);
+#else
+	printf( "got lp=%d tunnels=%d rh=%s rp=%d tunnelc=%d th=%s tp=%d proxy=%d ph=%s pp=%d auth=%s\n", lp, tunnels, rh, rp, tunnelc, th, tp, proxy, ph, pp, auth);
 #endif
 
 #ifdef HAVE_SSL
@@ -303,36 +316,9 @@ int main( int argc, char *argv[])
 	}
 	else
 	{
-		if (rh && rp && (!tunnel || (tunnel && th && tp)))
-		{
-			if (!tunnel)
-			{
-				if (verbose >= VERBOSE_INFO)
-				printf( "{proxy mode lp=%d rh=%s rp=%d}\n", lp, rh, rp);
-				err = 0;
-			}
-			else if (th && tp)
-			{
-				if (verbose >= VERBOSE_INFO)
-				printf( "{mux mode lp=%d rh=%s rp=%d tunnelling to th=%s tp=%d}\n", lp, rh, rp, th, tp);
-				err = 0;
-			}
-		}
-		else if (!tunnel || (tunnel && !th && !tp))
-		{
-			if (!tunnel)
-			{
-				if (verbose >= VERBOSE_INFO)
-				printf( "{server mode lp=%d}\n", lp);
-				err = 0;
-			}
-			else if (!th && !tp)
-			{
-				if (verbose >= VERBOSE_INFO)
-				printf( "{demux mode lp=%d, tunnelling}\n", lp);
-				err = 0;
-			}
-		}
+//		if (verbose >= VERBOSE_INFO)
+		printf( "{server mode lp=%d}\n", lp);
+		err = 0;
 	}
 	if (!err)
 	{
@@ -513,7 +499,7 @@ int main( int argc, char *argv[])
 #endif
 						if (rs)
 						{
-							if (tunnel && th)
+							if (tunnelc && th)
 							{
 								n = snprintf( buf, sizeof( buf), "CONNECT %s %d\n", th, tp);
 								if (n <= 0)
@@ -779,7 +765,7 @@ int main( int argc, char *argv[])
 			}
 			else			// valid data to read
 			{
-				if (tunnel && !rs)
+				if (tunnelc && !rs)
 				{
 					char host[MAX_TH];
 					int ok = 0;
@@ -898,8 +884,8 @@ err:
 		printf( " %s rh rp [%s] [%s th tp] [%s ph pp [%s auth]]\n", prog, ARG_SSL, ARG_TUN, ARG_PROX, ARG_AUTH);
 		printf( " %s lp [%s key cert] [%s] [rh [rp] [%s] [%s th tp] [%s ph pp [%s auth]]]\n", prog, ARG_SSL, ARG_TUN, ARG_SSL, ARG_TUN, ARG_PROX, ARG_AUTH);
 #else
-		printf( " - client : %s rh rp [%s th tp] [%s ph pp [%s auth]]\t\t\tconnect to rh:rp\n", prog);
-		printf( " - server : %s lp [%s] [rh [rp] [%s th tp] [%s ph pp [%s auth]]]\t\t\tlisten on lp\n", prog);
+		printf( " %s rh rp [%s th tp] [%s ph pp [%s auth]]\n", prog, ARG_TUN, ARG_PROX, ARG_AUTH);
+		printf( " %s lp [%s] [rh [rp] [%s th tp] [%s ph pp [%s auth]]]\n", prog, ARG_TUN, ARG_TUN, ARG_PROX, ARG_AUTH);
 #endif
 	}
 
