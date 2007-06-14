@@ -18,6 +18,8 @@
 
 #define ARG_TUN		"-t"
 #define ARG_SSL		"-s"
+#define ARG_PROX	"-p"
+#define ARG_AUTH	"-a"
 #define ARG_VERBOSE	"-v"
 
 #define MAX_TH	1024
@@ -57,9 +59,12 @@ int isdignum( const char *str)
 
 int main( int argc, char *argv[])
 {
-	int tunnel = 0;
+	int tunnels = 0;
+	int tunnelc = 0;
+	int proxy = 0;
 #ifdef HAVE_SSL
-	int use_ssl = 0;
+	int use_ssls = 0;
+	int use_sslc = 0;
 	char *key = NULL;
 	char *cert = NULL;
 	SSL_CTX *ssl_ctx = NULL;
@@ -70,6 +75,9 @@ int main( int argc, char *argv[])
 	int rp = 0;
 	char *th = NULL;
 	int tp = 0;
+	char *ph = NULL;
+	int pp = 0;
+	char *auth = NULL;
 	int err = 1;
 	char *prog = basename( argv[0]);
 //	char *prog = argv[0];
@@ -82,136 +90,183 @@ int main( int argc, char *argv[])
 	int on;
 	struct hostent *he;
 
-	if (arg < argc)
+	while (arg < argc)
 	{
 		if (isdignum( argv[arg]))
 		{
+			if (lp != 0)
+			{
+				printf( "*** only one lp authorized\n");
+				goto err;
+			}
 			if (sscanf( argv[arg], "%d", &lp) != 1)
 			{
 				printf( "*** bad lp\n");
 				goto err;
 			}
 			arg++;
-			while (arg < argc)
-			{
-#ifdef HAVE_SSL
-				if (!strcmp( argv[arg], ARG_SSL))
-				{
-					arg++;
-					if (tunnel)
-					{
-						if (!th)		// mandatory args : key cert
-						{
-							if (arg < argc)
-							{
-								key = argv[arg++];
-								if (arg < argc)
-								{
-									cert = argv[arg++];
-								}
-								else
-								{
-									printf( "*** missing cert\n");
-									goto err;
-								}
-							}
-							else
-							{
-								printf( "*** missing key\n");
-								goto err;
-							}
-						}
-						use_ssl = 1;
-					}
-					else
-					{
-						printf( "*** ssl available only with tunnel\n");
-						goto err;
-					}
-				}
-				else
-#endif
-				if (!strcmp( argv[arg], ARG_TUN))
-				{
-					arg++;
-					tunnel = 1;
-					if (rh)
-					{
-						if (arg < argc)
-						{
-							th = argv[arg++];
-							if (arg < argc)
-							{
-								if (sscanf( argv[arg], "%d", &tp) != 1 || !isdignum( argv[arg]))
-								{
-									printf( "*** bad tp\n");
-									goto err;
-								}
-								arg++;
-							}
-							else
-							{
-								printf( "*** missing tp\n");
-								goto err;
-							}
-						}
-						else
-						{
-							printf( "*** missing th\n");
-							goto err;
-						}
-					}
-				}
-				else
-				{
-					if (argv[arg][0] == '-')
-						break;
-					rh = argv[arg++];
-					if (arg < argc)
-					{
-						if (sscanf( argv[arg], "%d", &rp) != 1 || !isdignum( argv[arg]))
-						{
-							printf( "*** bad rp\n");
-							goto err;
-						}
-						arg++;
-					}
-					else
-						rp = lp;
-				}
-			}
 		}
 		else if (argv[arg][0] != '-')
 		{
+			if (rh)
+			{
+				printf( "*** only one rh authorized\n");
+				goto err;
+			}
 			rh = argv[arg++];
 			if (arg < argc)
 			{
-				if (sscanf( argv[arg], "%d", &rp) != 1 || !isdignum( argv[arg]))
+				if (isdignum( argv[arg]))
 				{
-					printf( "*** bad rp\n");
+					if (sscanf( argv[arg], "%d", &rp) != 1)
+					{
+						printf( "*** bad rp\n");
+						goto err;
+					}
+					arg++;
+				}
+				else if (!lp)
+				{
+					printf( "*** missing rp\n");
 					goto err;
 				}
-				arg++;
 			}
-			else
+			else if (!lp)
 			{
 				printf( "*** missing rp\n");
 				goto err;
 			}
 		}
-	}
-	while (arg < argc)
-	{
-		if (!strcmp( argv[arg], ARG_VERBOSE))
+		else	// options beginning by '-'
 		{
-			verbose++;
+			if (!strcmp( argv[arg], ARG_VERBOSE))
+			{
+				arg++;
+				verbose++;
+			}
+#ifdef HAVE_SSL
+			else if (!strcmp( argv[arg], ARG_SSL))
+			{
+				arg++;
+				if (lp && !rh)
+				{
+					if (arg < argc)
+					{
+						key = argv[arg++];
+						if (arg < argc)
+						{
+							cert = argv[arg++];
+							use_ssls = 1;
+						}
+						else
+						{
+							printf( "*** missing cert\n");
+							goto err;
+						}
+					}
+					else
+					{
+						printf( "*** missing key\n");
+						goto err;
+					}
+				}
+				else if (rh)
+				{
+					use_sslc = 1;
+				}
+				else
+				{
+					printf( "*** ssl arg needs lp and/or rh\n");
+					goto err;
+				}
+			}
+#endif
+			else if (!strcmp( argv[arg], ARG_TUN))
+			{
+				arg++;
+				if (rh)
+				{
+					tunnelc = 1;
+					if (arg < argc)
+					{
+						th = argv[arg++];
+						if (arg < argc)
+						{
+							if (sscanf( argv[arg], "%d", &tp) != 1 || !isdignum( argv[arg]))
+							{
+								printf( "*** bad tp\n");
+								goto err;
+							}
+							arg++;
+						}
+						else
+						{
+							printf( "*** missing tp\n");
+							goto err;
+						}
+					}
+					else
+					{
+						printf( "*** missing th\n");
+						goto err;
+					}
+				}
+			}
+			else if (!strcmp( argv[arg], ARG_PROX))
+			{
+				arg++;
+				proxy = 1;
+				if (arg < argc)
+				{
+					ph = argv[arg++];
+					if (arg < argc)
+					{
+						if (sscanf( argv[arg], "%d", &pp) != 1 || !isdignum( argv[arg]))
+						{
+							printf( "*** bad pp\n");
+							goto err;
+						}
+						arg++;
+					}
+					else
+					{
+						printf( "*** missing pp\n");
+						goto err;
+					}
+				}
+				else
+				{
+					printf( "*** missing ph\n");
+					goto err;
+				}
+			}
+			else if (!strcmp( argv[arg], ARG_AUTH))
+			{
+				arg++;
+				if (arg < argc)
+				{
+					auth = argv[arg++];
+				}
+				else
+				{
+					printf( "*** missing auth\n");
+					goto err;
+				}
+			}
+			else
+			{
+				printf( "*** unknown option : '%s'\n", argv[arg]);
+				goto err;
+			}
 		}
-		arg++;
 	}
-//	printf( "got lp=%d rh=%s rp=%d tunnel=%d th=%s tp=%d\n", lp, rh, rp, tunnel, th, tp);
+	if (verbose >= VERBOSE_DEBUG)
+#ifdef HAVE_SSL
+	printf( "got lp=%d ssls=%d key=%s cert=%d tunnels=%d rh=%s rp=%d sslc=%d tunnelc=%d th=%s tp=%d proxy=%d ph=%s pp=%d auth=%s\n", lp, use_ssls, key, cert, tunnels, rh, rp, use_sslc, tunnelc, th, tp, proxy, ph, pp, auth);
+#endif
 
 #ifdef HAVE_SSL
-	if (use_ssl)
+	if (use_ssls || use_sslc)
 	{
 		SSL_library_init();
 		SSL_load_error_strings();
@@ -222,7 +277,7 @@ int main( int argc, char *argv[])
 
 	if (!lp)
 	{
-		if (rh && rp && !tunnel)
+		if (rh && rp)
 		{
 			rs = socket( PF_INET, SOCK_STREAM, 0);
 			memset( &sa, 0, sizeof( sa));
@@ -259,11 +314,7 @@ int main( int argc, char *argv[])
 			else if (th && tp)
 			{
 				if (verbose >= VERBOSE_INFO)
-				printf( "{mux mode lp=%d rh=%s rp=%d %stunnelling to th=%s tp=%d}\n", lp, rh, rp,
-#ifdef HAVE_SSL
-				use_ssl ? "ssl/" :
-#endif
-				"", th, tp);
+				printf( "{mux mode lp=%d rh=%s rp=%d tunnelling to th=%s tp=%d}\n", lp, rh, rp, th, tp);
 				err = 0;
 			}
 		}
@@ -278,11 +329,7 @@ int main( int argc, char *argv[])
 			else if (!th && !tp)
 			{
 				if (verbose >= VERBOSE_INFO)
-#ifdef HAVE_SSL
-				printf( "{demux mode lp=%d, %stunnelling%s%s%s%s}\n", lp, use_ssl ? "ssl/" : "", use_ssl && !th ? " key=" : "", use_ssl && !th ? key : "", use_ssl && !th ? " cert=" : "", use_ssl && !th ? cert : "");
-#else
 				printf( "{demux mode lp=%d, tunnelling}\n", lp);
-#endif
 				err = 0;
 			}
 		}
@@ -405,7 +452,7 @@ int main( int argc, char *argv[])
 							printf( "closed remote\n");
 						}
 #ifdef HAVE_SSL
-						else if (use_ssl && rh)
+						else if (use_sslc && rh)
 						{
 							int ok = 0;
 
@@ -511,7 +558,7 @@ int main( int argc, char *argv[])
 						break;
 					}
 #ifdef HAVE_SSL
-					if (use_ssl && !rh)
+					if (use_ssls && !rh)
 					{
 						int ok = 0;
 
@@ -847,15 +894,12 @@ err:
 	else
 	{
 		printf( "Usage :\n");
-		printf( "        %s rh rp\t\t\tclient: connect to rh:rp\n", prog);
-		printf( "        %s lp\t\t\tserver: listen on lp\n", prog);
-		printf( "        %s lp rh rp\t\tproxy: bridge lp to rh:rp\n", prog);
 #ifdef HAVE_SSL
-		printf( "        %s lp %s [%s key cert]\tdemux: bridge lp to {th:tp}\n", prog, ARG_TUN, ARG_SSL);
-		printf( "        %s lp rh rp %s th tp [%s]\tmux: dispatch th:tp from lp to rh:rp\n", prog, ARG_TUN, ARG_SSL);
+		printf( " %s rh rp [%s] [%s th tp] [%s ph pp [%s auth]]\n", prog, ARG_SSL, ARG_TUN, ARG_PROX, ARG_AUTH);
+		printf( " %s lp [%s key cert] [%s] [rh [rp] [%s] [%s th tp] [%s ph pp [%s auth]]]\n", prog, ARG_SSL, ARG_TUN, ARG_SSL, ARG_TUN, ARG_PROX, ARG_AUTH);
 #else
-		printf( "        %s lp %s\t\t\tdemux: bridge lp to {th:tp}\n", prog, ARG_TUN);
-		printf( "        %s lp rh rp %s th tp\tmux: dispatch th:tp from lp to rh:rp\n", prog, ARG_TUN);
+		printf( " - client : %s rh rp [%s th tp] [%s ph pp [%s auth]]\t\t\tconnect to rh:rp\n", prog);
+		printf( " - server : %s lp [%s] [rh [rp] [%s th tp] [%s ph pp [%s auth]]]\t\t\tlisten on lp\n", prog);
 #endif
 	}
 
