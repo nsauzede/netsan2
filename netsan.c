@@ -16,17 +16,80 @@
 #include <openssl/err.h>
 #endif
 
-#define ARG_TUN		"-t"
-#ifdef HAVE_SSL
-#define ARG_SSL		"-s"
+#ifdef HAVE_DAEMONIZE
+#include <sys/stat.h>
+#include <fcntl.h>
 #endif
-#define ARG_PROX	"-p"
-#define ARG_AUTH	"-a"
-#define ARG_VERBOSE	"-v"
+
+#define ARG_TUN			"-t"
+#define ARG_PROX		"-p"
+#define ARG_AUTH		"-a"
+#define ARG_VERBOSE		"-v"
+
+#ifdef HAVE_DAEMONIZE
+#define ARG_DAEMONIZE	"-d"
+#endif
+
+#ifdef HAVE_SSL
+#define ARG_SSL			"-s"
+#endif
 
 #define MAX_TH	1024
 
 enum { VERBOSE_NONE, VERBOSE_INFO, VERBOSE_DEBUG };
+
+#ifdef HAVE_DAEMONIZE
+void daemonize( void)
+{
+        int fd;
+   switch (fork()) {
+       case 0:
+          break;
+       case -1:
+          // Error
+          fprintf(stderr, "Error demonizing (fork)! %d - %s\n", errno, strerror(errno));
+          exit(0);
+          break;
+       default:
+          _exit(0);
+   }
+
+   if (setsid() < 0) {
+      fprintf(stderr, "Error demonizing (setsid)! %d - %s\n", errno, strerror(errno));
+      exit(0);
+   }
+   switch (fork()) {
+       case 0:
+          break;
+       case -1:
+          // Error
+          fprintf(stderr, "Error demonizing (fork2)! %d - %s\n", errno, strerror(errno));
+          exit(0);
+          break;
+       default:
+          _exit(0);
+   }
+
+   chdir("/");
+
+   fd = open("/dev/null", O_RDONLY);
+   if (fd != 0) {
+      dup2(fd, 0);
+      close(fd);
+   }
+   fd = open("/dev/null", O_WRONLY);
+   if (fd != 1) {
+      dup2(fd, 1);
+      close(fd);
+   }
+   fd = open("/dev/null", O_WRONLY);
+   if (fd != 2) {
+      dup2(fd, 2);
+      close(fd);
+   }
+}
+#endif
+
 
 void asciify( char *ptr, int n)
 {
@@ -86,6 +149,9 @@ int main( int argc, char *argv[])
 	int arg = 1;
 //	int verbose = VERBOSE_NONE;
 	int verbose = VERBOSE_INFO;
+#ifdef HAVE_DAEMONIZE
+        int do_daemonize = 0;
+#endif
 
 	int ls = 0, rs = 0, cs = 0;
 	struct sockaddr_in sa;
@@ -146,6 +212,13 @@ int main( int argc, char *argv[])
 				arg++;
 				verbose++;
 			}
+#ifdef HAVE_DAEMONIZE
+			else if (!strcmp( argv[arg], ARG_DAEMONIZE))
+			{
+				arg++;
+				do_daemonize = 1;
+			}
+#endif
 #ifdef HAVE_SSL
 			else if (!strcmp( argv[arg], ARG_SSL))
 			{
@@ -288,6 +361,11 @@ int main( int argc, char *argv[])
 	}
 #endif
 
+#ifdef HAVE_DAEMONIZE
+	if (do_daemonize)
+		daemonize();
+#endif
+
 	if (!lp)
 	{
 		if (rh && rp)
@@ -358,7 +436,14 @@ int main( int argc, char *argv[])
 		}
 
 		FD_ZERO( &rfds);
+#ifdef HAVE_DAEMONIZE
+		if (!do_daemonize)
+		{
+#endif
 		FD_SET( 0, &rfds);
+#ifdef HAVE_DAEMONIZE
+		}
+#endif
 		if (verbose >= VERBOSE_DEBUG)
 		printf( "[select : 0");
 		if (ls)
@@ -437,66 +522,85 @@ int main( int argc, char *argv[])
 							if (verbose >= VERBOSE_DEBUG)
 							printf( "closed remote\n");
 						}
-#ifdef HAVE_SSL
-						else if (use_sslc && rh)
+						else
 						{
-							int ok = 0;
-
-							ssl_ctx = SSL_CTX_new( SSLv23_client_method());
-							if (ssl_ctx)
+							if (proxy && ph && pp)
 							{
-								if (verbose >= VERBOSE_DEBUG)
-								printf( ">>>SSL CTX created\n");
-								ssl = SSL_new( ssl_ctx);
-								if (ssl)
+								if (verbose >= VERBOSE_INFO)
+								printf( "sending proxy credentials..\n");
+								snprintf( buf, sizeof( buf), "CONNECT %s:%d HTTP/1.0\nHost: %s\n", ph, pp, ph);
+								write( rs, buf, strlen( buf));
+								snprintf( buf, sizeof( buf), "User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322)\nContent-Length: 0\nProxy-Connection: Keep-Alive\n");
+								write( rs, buf, strlen( buf));
+								if (auth)
+								{
+									snprintf( buf, sizeof( buf), "Proxy-Authorization: Basic %s\n", auth);
+									write( cs, buf, strlen( buf));
+								}
+								snprintf( buf, sizeof( buf), "\n");
+								write( cs, buf, strlen( buf));
+							}
+#ifdef HAVE_SSL
+							if (use_sslc && rh)
+							{
+								int ok = 0;
+
+								ssl_ctx = SSL_CTX_new( SSLv23_client_method());
+								if (ssl_ctx)
 								{
 									if (verbose >= VERBOSE_DEBUG)
-									printf( ">>>SSL created\n");
-									if (SSL_set_fd( ssl, rs))
+										printf( ">>>SSL CTX created\n");
+									ssl = SSL_new( ssl_ctx);
+									if (ssl)
 									{
 										if (verbose >= VERBOSE_DEBUG)
-										printf( ">>>SSL fd set\n");
-										n = SSL_connect( ssl);
-										if (verbose >= VERBOSE_DEBUG)
-										printf( ">>>SSL connect returned %d\n", n);
-										if (n == 1)
+											printf( ">>>SSL created\n");
+										if (SSL_set_fd( ssl, rs))
 										{
 											if (verbose >= VERBOSE_DEBUG)
-											printf( ">>>SSL connected\n");
-											ok = 1;
-										}
-										else
-										{
-											unsigned long err = ERR_get_error();
-											printf( ">>>SSL err : %d,%d %lu,%s\n", n, SSL_get_error( ssl, n), err, ERR_error_string( err, NULL));
+												printf( ">>>SSL fd set\n");
+											n = SSL_connect( ssl);
+											if (verbose >= VERBOSE_DEBUG)
+												printf( ">>>SSL connect returned %d\n", n);
+											if (n == 1)
+											{
+												if (verbose >= VERBOSE_DEBUG)
+													printf( ">>>SSL connected\n");
+												ok = 1;
+											}
+											else
+											{
+												unsigned long err = ERR_get_error();
+												printf( ">>>SSL err : %d,%d %lu,%s\n", n, SSL_get_error( ssl, n), err, ERR_error_string( err, NULL));
+											}
 										}
 									}
 								}
+								if (!ok)
+								{
+									if (ssl)
+									{
+										SSL_shutdown( ssl);
+										ssl = NULL;
+										if (verbose >= VERBOSE_DEBUG)
+											printf( ">>>SSL shutdown\n");
+									}
+									if (ssl_ctx)
+									{
+										SSL_CTX_free( ssl_ctx);
+										ssl_ctx = NULL;
+										if (verbose >= VERBOSE_DEBUG)
+											printf( ">>>SSL CTX freed\n");
+									}
+									if (rs)
+									{
+										close( rs);
+										rs = 0;
+									}
+								}
 							}
-							if (!ok)
-							{
-								if (ssl)
-								{
-									SSL_shutdown( ssl);
-									ssl = NULL;
-									if (verbose >= VERBOSE_DEBUG)
-									printf( ">>>SSL shutdown\n");
-								}
-								if (ssl_ctx)
-								{
-									SSL_CTX_free( ssl_ctx);
-									ssl_ctx = NULL;
-									if (verbose >= VERBOSE_DEBUG)
-									printf( ">>>SSL CTX freed\n");
-								}
-								if (rs)
-								{
-									close( rs);
-									rs = 0;
-								}
-							}
-						}
 #endif
+						}
 						if (rs)
 						{
 							if (tunnelc && th)
@@ -765,7 +869,7 @@ int main( int argc, char *argv[])
 			}
 			else			// valid data to read
 			{
-				if (tunnelc && !rs)
+				if (tunnels && !rs)
 				{
 					char host[MAX_TH];
 					int ok = 0;
