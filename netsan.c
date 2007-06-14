@@ -273,7 +273,7 @@ int main( int argc, char *argv[])
 	}
 	if (verbose >= VERBOSE_DEBUG)
 #ifdef HAVE_SSL
-	printf( "got lp=%d ssls=%d key=%s cert=%d tunnels=%d rh=%s rp=%d sslc=%d tunnelc=%d th=%s tp=%d proxy=%d ph=%s pp=%d auth=%s\n", lp, use_ssls, key, cert, tunnels, rh, rp, use_sslc, tunnelc, th, tp, proxy, ph, pp, auth);
+	printf( "got lp=%d ssls=%d key=%s cert=%s tunnels=%d rh=%s rp=%d sslc=%d tunnelc=%d th=%s tp=%d proxy=%d ph=%s pp=%d auth=%s\n", lp, use_ssls, key, cert, tunnels, rh, rp, use_sslc, tunnelc, th, tp, proxy, ph, pp, auth);
 #else
 	printf( "got lp=%d tunnels=%d rh=%s rp=%d tunnelc=%d th=%s tp=%d proxy=%d ph=%s pp=%d auth=%s\n", lp, tunnels, rh, rp, tunnelc, th, tp, proxy, ph, pp, auth);
 #endif
