@@ -213,7 +213,7 @@ int main( int argc, char *argv[])
 						goto err;
 					}
 				}
-				if (lp)
+				else if (lp)
 				{
 					tunnels = 1;
 				}
