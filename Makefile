@@ -22,6 +22,10 @@ CFLAGS+=	-DOPENSSL_NO_KRB5
 LDFLAGS+=	-lssl
 endif
 
+ifdef DAEMON
+CFLAGS+=	-DHAVE_DAEMON
+endif
+
 ssl:	CFLAGS+=-DOPENSSL_NO_KRB5
 ssl:	LDFLAGS+=-lssl
 

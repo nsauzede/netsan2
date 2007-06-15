@@ -524,6 +524,8 @@ int main( int argc, char *argv[])
 						}
 						else
 						{
+							if (verbose >= VERBOSE_INFO)
+								printf( "connected !!\n");
 							if (proxy && ph && pp)
 							{
 								if (verbose >= VERBOSE_INFO)
@@ -535,10 +537,10 @@ int main( int argc, char *argv[])
 								if (auth)
 								{
 									snprintf( buf, sizeof( buf), "Proxy-Authorization: Basic %s\n", auth);
-									write( cs, buf, strlen( buf));
+									write( rs, buf, strlen( buf));
 								}
 								snprintf( buf, sizeof( buf), "\n");
-								write( cs, buf, strlen( buf));
+								write( rs, buf, strlen( buf));
 							}
 #ifdef HAVE_SSL
 							if (use_sslc && rh)
