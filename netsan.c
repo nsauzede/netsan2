@@ -387,19 +387,35 @@ int main( int argc, char *argv[])
 //				if (verbose >= VERBOSE_INFO)
 				printf( "{client mode rh=%s rp=%d}\n", rh, rp);
 				err = 0;
-#ifdef HAVE_SSL
-							if (use_sslc && rh)
+							if (proxy && ph && pp)
 							{
-								int ok = 0;
-
-								ssl_ctx = SSL_CTX_new( SSLv23_client_method());
-								if (ssl_ctx)
+								if (verbose >= VERBOSE_INFO)
+								printf( "sending proxy credentials..\n");
+								snprintf( buf, sizeof( buf), "CONNECT %s:%d HTTP/1.0\n", ph, pp); write( rs, buf, strlen( buf));
+								snprintf( buf, sizeof( buf), "Host: %s\n", ph); write( rs, buf, strlen( buf));
+								snprintf( buf, sizeof( buf), "User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322)\n"); write( rs, buf, strlen( buf));
+								snprintf( buf, sizeof( buf), "Content-Length: 0\n"); write( rs, buf, strlen( buf));
+								snprintf( buf, sizeof( buf), "Proxy-Connection: Keep-Alive\n"); write( rs, buf, strlen( buf));
+								if (auth)
 								{
-									if (verbose >= VERBOSE_DEBUG)
-										printf( ">>>SSL CTX created\n");
-									ssl = SSL_new( ssl_ctx);
-									if (ssl)
-									{
+									snprintf( buf, sizeof( buf), "Proxy-Authorization: Basic %s\n", auth); write( rs, buf, strlen( buf));
+								}
+								snprintf( buf, sizeof( buf), "\n"); write( rs, buf, strlen( buf));
+								read( rs, buf, sizeof( buf));		// wait for Connected response
+							}
+#ifdef HAVE_SSL
+				if (use_sslc && rh)
+				{
+					int ok = 0;
+
+					ssl_ctx = SSL_CTX_new( SSLv23_client_method());
+					if (ssl_ctx)
+					{
+						if (verbose >= VERBOSE_DEBUG)
+							printf( ">>>SSL CTX created\n");
+						ssl = SSL_new( ssl_ctx);
+						if (ssl)
+						{
 										if (verbose >= VERBOSE_DEBUG)
 											printf( ">>>SSL created\n");
 										if (SSL_set_fd( ssl, rs))
@@ -443,9 +459,9 @@ int main( int argc, char *argv[])
 									{
 										close( rs);
 										rs = 0;
-									}
-								}
-							}
+						}
+					}
+				}
 #endif
 				if (tunnelc && th && tp)
 				{
