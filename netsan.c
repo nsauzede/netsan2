@@ -873,24 +873,34 @@ int main( int argc, char *argv[])
 			{
 				if (tunnels && !rs)
 				{
-					char host[MAX_TH];
+					char tmp[MAX_TH];
 					int ok = 0;
 					
 					if (verbose >= VERBOSE_DEBUG)
 						printf( "tunnels: got [%s]\n", buf);
-					if (2 == sscanf( buf, "CONNECT %s %d\n", host, &tp))
+					if (1 == sscanf( buf, "GET %*s %s", tmp))
+					{
+						snprintf( buf, sizeof( buf), "%s 200 OK\nContent-Lenght: 0\n\n", tmp);
+#ifdef HAVE_SSL
+						if (ssl)
+							SSL_write( ssl, buf, strlen( buf));
+						else
+#endif
+						write( cs, buf, strlen( buf));
+					}
+					else if (2 == sscanf( buf, "CONNECT %s %d\n", tmp, &tp))
 					{
 						if (verbose >= VERBOSE_DEBUG)
-						printf( "+++tunnel about to connect rs to %s:%d\n", host, tp);
+						printf( "+++tunnel about to connect rs to %s:%d\n", tmp, tp);
 						rs = socket( PF_INET, SOCK_STREAM, 0);
 						memset( &sa, 0, sizeof( sa));
 						sa.sin_family = AF_INET;
 						sa.sin_port = htons( tp);
-						he = gethostbyname( host);
+						he = gethostbyname( tmp);
 						if (he)
 							memcpy( &sa.sin_addr.s_addr, he->h_addr, sizeof( sa.sin_addr.s_addr));
 						else
-							sa.sin_addr.s_addr = inet_addr( host);
+							sa.sin_addr.s_addr = inet_addr( tmp);
 						if (!connect( rs, (struct sockaddr *)&sa, sizeof( sa)))
 						{
 							int size;
