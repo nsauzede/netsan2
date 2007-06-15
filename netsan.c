@@ -150,7 +150,7 @@ int main( int argc, char *argv[])
 //	int verbose = VERBOSE_NONE;
 	int verbose = VERBOSE_INFO;
 #ifdef HAVE_DAEMONIZE
-        int do_daemonize = 0;
+	int do_daemonize = 0;
 #endif
 
 	int ls = 0, rs = 0, cs = 0;
@@ -210,6 +210,8 @@ int main( int argc, char *argv[])
 		}
 		else	// options beginning by '-'
 		{
+			if (verbose >= VERBOSE_DEBUG)
+				printf( "parsing option [%s]\n", argv[arg]);
 			if (!strcmp( argv[arg], ARG_VERBOSE))
 			{
 				arg++;
@@ -348,6 +350,14 @@ int main( int argc, char *argv[])
 		}
 	}
 	if (verbose >= VERBOSE_DEBUG)
+#ifdef HAVE_DAEMONIZE
+	if (verbose >= VERBOSE_INFO)
+	printf( "have_daemon\n");
+#endif
+#ifdef HAVE_SSL
+	if (verbose >= VERBOSE_INFO)
+	printf( "have_ssl\n");
+#endif
 #ifdef HAVE_SSL
 	printf( "got lp=%d ssls=%d key=%s cert=%s tunnels=%d rh=%s rp=%d sslc=%d tunnelc=%d th=%s tp=%d proxy=%d ph=%s pp=%d auth=%s\n", lp, use_ssls, key, cert, tunnels, rh, rp, use_sslc, tunnelc, th, tp, proxy, ph, pp, auth);
 #else
@@ -366,7 +376,9 @@ int main( int argc, char *argv[])
 
 #ifdef HAVE_DAEMONIZE
 	if (do_daemonize)
+	{
 		daemonize();
+	}
 #endif
 
 	if (!lp)
@@ -979,7 +991,7 @@ int main( int argc, char *argv[])
 						printf( "tunnels: got [%s]\n", buf);
 					if (1 == sscanf( buf, "GET %*s %s", tmp))
 					{
-						snprintf( buf, sizeof( buf), "%s 200 OK\nContent-Lenght: 0\n\n", tmp);
+						snprintf( buf, sizeof( buf), "%s 200 OK\nContent-Lenght: 14\n\nchuck la plante", tmp);
 #ifdef HAVE_SSL
 						if (ssl)
 							SSL_write( ssl, buf, strlen( buf));
