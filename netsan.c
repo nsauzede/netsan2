@@ -875,7 +875,9 @@ int main( int argc, char *argv[])
 				{
 					char host[MAX_TH];
 					int ok = 0;
-						
+					
+					if (verbose >= VERBOSE_DEBUG)
+						printf( "tunnels: got [%s]\n", buf);
 					if (2 == sscanf( buf, "CONNECT %s %d\n", host, &tp))
 					{
 						if (verbose >= VERBOSE_DEBUG)
