@@ -19,7 +19,13 @@ endif
 ifdef SSL
 CFLAGS+=	-DHAVE_SSL
 CFLAGS+=	-DOPENSSL_NO_KRB5
+ifdef OS_WIN32
+OPENSSL=	/c/OpenSSL
+CFLAGS+=	-I$(OPENSSL)/include
+LDFLAGS+=	$(OPENSSL)/lib/MinGW/libeay32.a $(OPENSSL)/lib/MinGW/ssleay32.a
+else
 LDFLAGS+=	-lssl
+endif
 endif
 
 ifdef DAEMON
