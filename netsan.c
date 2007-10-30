@@ -93,6 +93,15 @@ void daemonize( void)
 
 void asciify( char *ptr, int n)
 {
+#if 1
+	int i;
+	printf( "\n{%4d ", n);
+	for (i = 0; i < n; i++)
+	{
+		printf( "%02x", *(unsigned char *)(ptr + i));
+	}
+	printf( "}\n");
+#endif
 	while (n > 0)
 	{
 		if ((*ptr < ' ') && (*ptr != '\t') && (*ptr != '\r') && (*ptr != '\n'))
@@ -534,7 +543,7 @@ int main( int argc, char *argv[])
 			printf( "||||creating local server\n");
 			ls = socket( PF_INET, SOCK_STREAM, 0);
 			on = 1;
-			setsockopt( ls, SOL_SOCKET, SO_REUSEADDR, (const void *)&on, sizeof( on));
+//			setsockopt( ls, SOL_SOCKET, SO_REUSEADDR, (const void *)&on, sizeof( on));
 			memset( &sa, 0, sizeof( sa));
 			sa.sin_family = AF_INET;
 			sa.sin_port = htons( lp);
@@ -1074,7 +1083,7 @@ int main( int argc, char *argv[])
 #if 0
 					printf( "%d bytes [%s]\n", n, buf);
 #else
-					printf( "%s", buf);
+					printf( "%c%s", in==cs?'<':'>',buf);
 #endif
 				}
 			}
