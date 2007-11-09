@@ -11,7 +11,7 @@ endif
 CFLAGS=		-Wall -Werror -O0 -g
 
 ifdef OS_WIN32
-LIBYACAPI=	/home/sauzeden/tmp/build-libyacapi/install
+LIBYACAPI=	$(USR)
 CFLAGS+=	-I$(LIBYACAPI)/include/compat
 LDFLAGS+=	-L$(LIBYACAPI)/lib -lyacapi -lws2_32
 endif
