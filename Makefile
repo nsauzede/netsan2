@@ -12,7 +12,7 @@ CFLAGS=		-Wall -Werror -O0 -g
 
 ifdef OS_WIN32
 LIBYACAPI=	$(USR)
-CFLAGS+=	-I$(LIBYACAPI)/include/compat
+CFLAGS+=	-I$(LIBYACAPI)/include/yacapi/compat
 LDFLAGS+=	-L$(LIBYACAPI)/lib -lyacapi -lws2_32
 endif
 
