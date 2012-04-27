@@ -407,22 +407,22 @@ int main( int argc, char *argv[])
 //				if (verbose >= VERBOSE_INFO)
 				printf( "{client mode rh=%s rp=%d}\n", rh, rp);
 				err = 0;
-							if (proxy && ph && pp)
-							{
-								if (verbose >= VERBOSE_INFO)
-								printf( "sending proxy credentials..\n");
-								snprintf( buf, sizeof( buf), "CONNECT %s:%d HTTP/1.0\n", ph, pp); write( rs, buf, strlen( buf));
-								snprintf( buf, sizeof( buf), "Host: %s\n", ph); write( rs, buf, strlen( buf));
-								snprintf( buf, sizeof( buf), "User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322)\n"); write( rs, buf, strlen( buf));
-								snprintf( buf, sizeof( buf), "Content-Length: 0\n"); write( rs, buf, strlen( buf));
-								snprintf( buf, sizeof( buf), "Proxy-Connection: Keep-Alive\n"); write( rs, buf, strlen( buf));
-								if (auth)
-								{
-									snprintf( buf, sizeof( buf), "Proxy-Authorization: Basic %s\n", auth); write( rs, buf, strlen( buf));
-								}
-								snprintf( buf, sizeof( buf), "\n"); write( rs, buf, strlen( buf));
-								read( rs, buf, sizeof( buf));		// wait for Connected response
-							}
+				if (proxy && ph && pp)
+				{
+					if (verbose >= VERBOSE_INFO)
+					printf( "sending proxy credentials..\n");
+					snprintf( buf, sizeof( buf), "CONNECT %s:%d HTTP/1.0\n", ph, pp); write( rs, buf, strlen( buf));
+					snprintf( buf, sizeof( buf), "Host: %s\n", ph); write( rs, buf, strlen( buf));
+					snprintf( buf, sizeof( buf), "User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322)\n"); write( rs, buf, strlen( buf));
+					snprintf( buf, sizeof( buf), "Content-Length: 0\n"); write( rs, buf, strlen( buf));
+					snprintf( buf, sizeof( buf), "Proxy-Connection: Keep-Alive\n"); write( rs, buf, strlen( buf));
+					if (auth)
+					{
+						snprintf( buf, sizeof( buf), "Proxy-Authorization: Basic %s\n", auth); write( rs, buf, strlen( buf));
+					}
+					snprintf( buf, sizeof( buf), "\n"); write( rs, buf, strlen( buf));
+					read( rs, buf, sizeof( buf));		// wait for Connected response
+				}
 #ifdef HAVE_SSL
 				if (use_sslc && rh)
 				{
@@ -436,49 +436,49 @@ int main( int argc, char *argv[])
 						ssl = SSL_new( ssl_ctx);
 						if (ssl)
 						{
-										if (verbose >= VERBOSE_DEBUG)
-											printf( ">>>SSL created\n");
-										if (SSL_set_fd( ssl, rs))
-										{
-											if (verbose >= VERBOSE_DEBUG)
-												printf( ">>>SSL fd set\n");
-											n = SSL_connect( ssl);
-											if (verbose >= VERBOSE_DEBUG)
-												printf( ">>>SSL connect returned %d\n", n);
-											if (n == 1)
-											{
-												if (verbose >= VERBOSE_DEBUG)
-													printf( ">>>SSL connected\n");
-												ok = 1;
-											}
-											else
-											{
-												unsigned long err = ERR_get_error();
-												printf( ">>>SSL err : %d,%d %lu,%s\n", n, SSL_get_error( ssl, n), err, ERR_error_string( err, NULL));
-											}
-										}
-									}
-								}
-								if (!ok)
+							if (verbose >= VERBOSE_DEBUG)
+								printf( ">>>SSL created\n");
+							if (SSL_set_fd( ssl, rs))
+							{
+								if (verbose >= VERBOSE_DEBUG)
+									printf( ">>>SSL fd set\n");
+								n = SSL_connect( ssl);
+								if (verbose >= VERBOSE_DEBUG)
+									printf( ">>>SSL connect returned %d\n", n);
+								if (n == 1)
 								{
-									if (ssl)
-									{
-										SSL_shutdown( ssl);
-										ssl = NULL;
-										if (verbose >= VERBOSE_DEBUG)
-											printf( ">>>SSL shutdown\n");
-									}
-									if (ssl_ctx)
-									{
-										SSL_CTX_free( ssl_ctx);
-										ssl_ctx = NULL;
-										if (verbose >= VERBOSE_DEBUG)
-											printf( ">>>SSL CTX freed\n");
-									}
-									if (rs)
-									{
-										close( rs);
-										rs = 0;
+									if (verbose >= VERBOSE_DEBUG)
+										printf( ">>>SSL connected\n");
+									ok = 1;
+								}
+								else
+								{
+									unsigned long err = ERR_get_error();
+									printf( ">>>SSL err : %d,%d %lu,%s\n", n, SSL_get_error( ssl, n), err, ERR_error_string( err, NULL));
+								}
+							}
+						}
+					}
+					if (!ok)
+					{
+						if (ssl)
+						{
+							SSL_shutdown( ssl);
+							ssl = NULL;
+							if (verbose >= VERBOSE_DEBUG)
+								printf( ">>>SSL shutdown\n");
+						}
+						if (ssl_ctx)
+						{
+							SSL_CTX_free( ssl_ctx);
+							ssl_ctx = NULL;
+							if (verbose >= VERBOSE_DEBUG)
+								printf( ">>>SSL CTX freed\n");
+						}
+						if (rs)
+						{
+							close( rs);
+							rs = 0;
 						}
 					}
 				}
@@ -1134,4 +1134,3 @@ err:
 
 	return 0;
 }
-
