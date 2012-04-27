@@ -90,7 +90,6 @@ void daemonize( void)
 }
 #endif
 
-
 void asciify( char *ptr, int n)
 {
 #if 1
@@ -543,7 +542,7 @@ int main( int argc, char *argv[])
 			printf( "||||creating local server\n");
 			ls = socket( PF_INET, SOCK_STREAM, 0);
 			on = 1;
-//			setsockopt( ls, SOL_SOCKET, SO_REUSEADDR, (const void *)&on, sizeof( on));
+			setsockopt( ls, SOL_SOCKET, SO_REUSEADDR, (const void *)&on, sizeof( on));
 			memset( &sa, 0, sizeof( sa));
 			sa.sin_family = AF_INET;
 			sa.sin_port = htons( lp);
@@ -1070,8 +1069,14 @@ int main( int argc, char *argv[])
 					else
 #endif
 					{
+						char *ptr;
 					if (verbose >= VERBOSE_DEBUG)
 					printf( "about to write...\n");
+					if ((ptr = strstr( buf, "\x1b\n")))
+					{
+						*ptr = 0;
+						n = strlen( buf);
+					}
 					write( out, buf, n);
 					}
 				}

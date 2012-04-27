@@ -10,6 +10,14 @@ endif
 
 CFLAGS=		-Wall -Werror -O0 -g
 
+ifdef USE32
+CFLAGS+=-m32
+LDFLAGS+=-m32
+endif
+ifdef STATIC
+LDFLAGS+=-static
+endif
+
 ifdef OS_WIN32
 LIBYACAPI=	$(USR)
 CFLAGS+=	-I$(LIBYACAPI)/include/yacapi/compat
