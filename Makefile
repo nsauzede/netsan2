@@ -2,7 +2,7 @@ ifneq ($(strip $(shell $(CC) -v 2>&1 | grep "mingw")),)
 OS_WIN32=true
 endif
 
-TARGET=		netsan
+TARGET=		netsan.exe
 
 ifdef WIN32
 TARGET+= ssl sun ssls sslc
@@ -20,8 +20,9 @@ endif
 
 ifdef OS_WIN32
 LIBYACAPI=	$(USR)
-CFLAGS+=	-I$(LIBYACAPI)/include/yacapi/compat
-LDFLAGS+=	-L$(LIBYACAPI)/lib -lyacapi -lws2_32
+CFLAGS+=	-I$(LIBYACAPI)/include/compat
+#LDFLAGS+=	-L$(LIBYACAPI)/lib -lyacapi -lws2_32
+LDFLAGS+=	$(LIBYACAPI)/lib/libyacapi.a -lws2_32
 endif
 
 ifdef SSL
@@ -44,10 +45,10 @@ ssl:	CFLAGS+=-DOPENSSL_NO_KRB5
 ssl:	LDFLAGS+=-lssl
 
 ssls:	CFLAGS+=-DOPENSSL_NO_KRB5
-ssls:	LDFLAGS+=-lssl
+#ssls:	LDFLAGS+=-lssl
 
 sslc:	CFLAGS+=-DOPENSSL_NO_KRB5
-sslc:	LDFLAGS+=-lssl
+#sslc:	LDFLAGS+=-lssl
 
 netsan:	netsan.c
 	$(CC) -o $@ $(CFLAGS) $^ $(LDFLAGS)

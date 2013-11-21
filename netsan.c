@@ -187,6 +187,7 @@ int main( int argc, char *argv[])
 		}
 		else if (argv[arg][0] != '-')
 		{
+//			printf( "$$ parsing non-switch arg\n");
 			if (rh)
 			{
 				printf( "*** only one rh authorized\n");
@@ -516,8 +517,15 @@ int main( int argc, char *argv[])
 	}
 	else
 	{
-//		if (verbose >= VERBOSE_INFO)
-		printf( "{server mode lp=%d}\n", lp);
+		if (rh)
+		{
+			printf( "{proxy mode lp=%d rh=%s rp=%d}\n", lp, rh, rp);
+		}
+		else
+		{
+//			if (verbose >= VERBOSE_INFO)
+			printf( "{server mode lp=%d}\n", lp);
+		}
 		err = 0;
 	}
 	if (!err)
