@@ -10,8 +10,9 @@ TARGET=		netsan.exe
 ifdef WIN32
 TARGET+= ssls.exe
 TARGET+= sslc.exe
-SSL=1
 endif
+
+SSL=1
 
 CFLAGS=		-Wall -Werror -O0 -g
 

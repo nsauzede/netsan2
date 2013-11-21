@@ -465,8 +465,12 @@ int main( int argc, char *argv[])
 								}
 								else
 								{
+#if 0
 									unsigned long err = ERR_get_error();
 									printf( ">>>SSL err : %d,%d %lu,%s\n", n, SSL_get_error( ssl, n), err, ERR_error_string( err, NULL));
+#else
+									printf( ">>>SSL err : %d,%d\n", n, SSL_get_error( ssl, n));
+#endif
 								}
 							}
 						}
@@ -710,8 +714,12 @@ int main( int argc, char *argv[])
 											}
 											else
 											{
+#if 0
 												unsigned long err = ERR_get_error();
 												printf( ">>>SSL err : %d,%d %lu,%s\n", n, SSL_get_error( ssl, n), err, ERR_error_string( err, NULL));
+#else
+												printf( ">>>SSL err : %d,%d\n", n, SSL_get_error( ssl, n));
+#endif
 											}
 										}
 									}
@@ -813,9 +821,12 @@ int main( int argc, char *argv[])
 										ok = 1;
 									else
 									{
+#if 0
 										unsigned long err = ERR_get_error();
-
 										printf( ">>>SSL err : %d,%d %lu,%s\n", n, SSL_get_error( ssl, n), err, ERR_error_string( err, NULL));
+#else
+										printf( ">>>SSL err : %d,%d\n", n, SSL_get_error( ssl, n));
+#endif
 									}
 								}
 							}
@@ -885,9 +896,12 @@ int main( int argc, char *argv[])
 				printf( ">>>SSL read returned %d\n", n);
 				if (n < 0)		// read error
 				{
+#if 0
 					unsigned long err = ERR_get_error();
-
 					printf( ">>>SSL***%d,%d %lu,%s\n", n, SSL_get_error( ssl, n), err, ERR_error_string( err, NULL));
+#else
+					printf( ">>>SSL***%d,%d\n", n, SSL_get_error( ssl, n));
+#endif
 					break;
 				}
 			}
