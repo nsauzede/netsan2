@@ -25,6 +25,7 @@
 #define ARG_PROX		"-p"
 #define ARG_AUTH		"-a"
 #define ARG_VERBOSE		"-v"
+#define ARG_HEX			"-x"
 
 #ifdef HAVE_DAEMONIZE
 #define ARG_DAEMONIZE	"-d"
@@ -90,9 +91,10 @@ void daemonize( void)
 }
 #endif
 
-void asciify( char *ptr, int n)
+void asciify( char *ptr, int n, int do_hex)
 {
-#if 1
+if (do_hex)
+{
 	int i;
 	printf( "\n{%4d ", n);
 	for (i = 0; i < n; i++)
@@ -100,10 +102,13 @@ void asciify( char *ptr, int n)
 		printf( "%02x", *(unsigned char *)(ptr + i));
 	}
 	printf( "}\n");
-#endif
+}
 	while (n > 0)
 	{
-		if ((*ptr < ' ') && (*ptr != '\t') && (*ptr != '\r') && (*ptr != '\n'))
+		if ((*ptr < ' ') 
+		/*&& (*ptr != '\t') && (*ptr != '\r') && (*ptr != '\n')*/
+		|| (*ptr == '\t') || (*ptr == '\r') || (*ptr == '\n')
+		)
 			*ptr = '.';
 		 ptr++;
 		 n--;
@@ -157,6 +162,7 @@ int main( int argc, char *argv[])
 	int arg = 1;
 //	int verbose = VERBOSE_NONE;
 	int verbose = VERBOSE_INFO;
+	int do_hex = 0;
 #ifdef HAVE_DAEMONIZE
 	int do_daemonize = 0;
 #endif
@@ -225,6 +231,11 @@ int main( int argc, char *argv[])
 			{
 				arg++;
 				verbose++;
+			}
+			else if (!strcmp( argv[arg], ARG_HEX))
+			{
+				arg++;
+				sscanf( argv[arg++], "%d", &do_hex);
 			}
 #ifdef HAVE_DAEMONIZE
 			else if (!strcmp( argv[arg], ARG_DAEMONIZE))
@@ -1092,11 +1103,11 @@ int main( int argc, char *argv[])
 				{
 					if (n > (sizeof( buf) - 1))
 						n = sizeof( buf) - 1;
-					asciify( buf, n);
+					asciify( buf, n, do_hex);
 #if 0
 					printf( "%d bytes [%s]\n", n, buf);
 #else
-					printf( "%c%s", in==cs?'<':'>',buf);
+					printf( "%c%s\n", in==cs?'<':'>',buf);
 #endif
 				}
 			}
@@ -1138,6 +1149,9 @@ err:
 		printf( " %s rh rp [%s th tp] [%s ph pp [%s auth]]\n", prog, ARG_TUN, ARG_PROX, ARG_AUTH);
 		printf( " %s lp [%s] [rh [rp] [%s th tp] [%s ph pp [%s auth]]]\n", prog, ARG_TUN, ARG_TUN, ARG_PROX, ARG_AUTH);
 #endif
+		printf( "Options:\n");
+		printf( " %s augment verbose level\n", ARG_VERBOSE);
+		printf( " %s dump hex bytes\n", ARG_HEX);
 	}
 
 	return 0;

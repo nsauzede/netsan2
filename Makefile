@@ -5,7 +5,10 @@ endif
 TARGET=		netsan.exe
 
 ifdef WIN32
-TARGET+= ssl sun ssls sslc
+TARGET+= ssl.exe
+TARGET+= sun.exe
+TARGET+= ssls.exe
+TARGET+= sslc.exe
 endif
 
 CFLAGS=		-Wall -Werror -O0 -g
@@ -53,7 +56,7 @@ sslc:	CFLAGS+=-DOPENSSL_NO_KRB5
 netsan:	netsan.c
 	$(CC) -o $@ $(CFLAGS) $^ $(LDFLAGS)
 
-%:	%.c
+%.exe:	%.c
 	$(CC) -o $@ $(CFLAGS) $^ $(LDFLAGS)
 
 all:	$(TARGET)

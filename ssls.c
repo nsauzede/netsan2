@@ -82,8 +82,12 @@ int main( int argc, char *argv[])
 							}
 							else
 							{
+#ifdef WIN32
 								unsigned long err = ERR_get_error();
 								printf( "failed to SSL accept (%d, %d) (%ld, %s)\n", n, SSL_get_error( ssl, n), err, ERR_error_string( err, NULL));
+#else
+								printf( "failed to SSL accept (%d)\n", n);
+#endif
 							}
 						}
 						else
