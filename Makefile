@@ -1,14 +1,16 @@
 ifneq ($(strip $(shell $(CC) -v 2>&1 | grep "mingw")),)
-OS_WIN32=true
+WIN32=1
 endif
 
 TARGET=		netsan.exe
 
+#TARGET+= ssl.exe
+#TARGET+= sun.exe
+
 ifdef WIN32
-TARGET+= ssl.exe
-TARGET+= sun.exe
 TARGET+= ssls.exe
 TARGET+= sslc.exe
+SSL=1
 endif
 
 CFLAGS=		-Wall -Werror -O0 -g
@@ -21,7 +23,7 @@ ifdef STATIC
 LDFLAGS+=-static
 endif
 
-ifdef OS_WIN32
+ifdef WIN32
 LIBYACAPI=	$(USR)
 CFLAGS+=	-I$(LIBYACAPI)/include/compat
 #LDFLAGS+=	-L$(LIBYACAPI)/lib -lyacapi -lws2_32
@@ -31,8 +33,8 @@ endif
 ifdef SSL
 CFLAGS+=	-DHAVE_SSL
 CFLAGS+=	-DOPENSSL_NO_KRB5
-ifdef OS_WIN32
-OPENSSL=	/c/OpenSSL
+ifdef WIN32
+OPENSSL=	/c/OpenSSL-Win32
 CFLAGS+=	-I$(OPENSSL)/include
 LDFLAGS+=	$(OPENSSL)/lib/MinGW/libeay32.a $(OPENSSL)/lib/MinGW/ssleay32.a
 else
@@ -52,9 +54,6 @@ ssls:	CFLAGS+=-DOPENSSL_NO_KRB5
 
 sslc:	CFLAGS+=-DOPENSSL_NO_KRB5
 #sslc:	LDFLAGS+=-lssl
-
-netsan:	netsan.c
-	$(CC) -o $@ $(CFLAGS) $^ $(LDFLAGS)
 
 %.exe:	%.c
 	$(CC) -o $@ $(CFLAGS) $^ $(LDFLAGS)
