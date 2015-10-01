@@ -12,7 +12,10 @@ TARGET+= ssls.exe
 TARGET+= sslc.exe
 endif
 
+#ifneq ("$(wildcard $(/usr/include/openssl/ssl.h))","")
+ifeq ("$(shell md5sum /usr/include/openssl/ssl.h 2>&1 > /dev/null;echo $$?)","0")
 SSL=1
+endif
 
 CFLAGS=		-Wall -Werror -O0 -g
 
