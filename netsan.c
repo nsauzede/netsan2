@@ -173,7 +173,8 @@ int main( int argc, char *argv[])
 	struct hostent *he;
 
 	int n;
-	char buf[1024];
+//	char buf[1024];
+	char buf[4096];
 
 	while (arg < argc)
 	{
