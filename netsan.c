@@ -26,6 +26,7 @@
 #define ARG_AUTH		"-a"
 #define ARG_VERBOSE		"-v"
 #define ARG_HEX			"-x"
+#define ARG_QUIT_ON_HANGUP	"-h"
 
 #ifdef HAVE_DAEMONIZE
 #define ARG_DAEMONIZE	"-d"
@@ -166,6 +167,7 @@ int main( int argc, char *argv[])
 #ifdef HAVE_DAEMONIZE
 	int do_daemonize = 0;
 #endif
+	int do_quit_on_hangup = 0;
 
 	int ls = 0, rs = 0, cs = 0;
 	struct sockaddr_in sa;
@@ -245,6 +247,11 @@ int main( int argc, char *argv[])
 				do_daemonize = 1;
 			}
 #endif
+			else if (!strcmp( argv[arg], ARG_QUIT_ON_HANGUP))
+			{
+				arg++;
+				do_quit_on_hangup = 1;
+			}
 #ifdef HAVE_SSL
 			else if (!strcmp( argv[arg], ARG_SSL))
 			{
@@ -975,6 +982,8 @@ int main( int argc, char *argv[])
 					cs = 0;
 //					if (verbose >= VERBOSE_DEBUG)
 					printf( "[client left]\n");
+					if (do_quit_on_hangup)
+						break;
 				}
 				else			// user hit ctrl-d
 				{
@@ -1167,6 +1176,10 @@ err:
 		printf( "Options:\n");
 		printf( " %s augment verbose level\n", ARG_VERBOSE);
 		printf( " %s dump hex bytes\n", ARG_HEX);
+		printf( " %s quit on hangup\n", ARG_QUIT_ON_HANGUP);
+#ifdef HAVE_DAEMONIZE
+		printf( " %s daemonize\n", ARG_DAEMONIZE);
+#endif
 	}
 
 	return 0;

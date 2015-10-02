@@ -10,6 +10,8 @@ TARGET=		netsan.exe
 ifdef WIN32
 TARGET+= ssls.exe
 TARGET+= sslc.exe
+else
+DAEMON=1
 endif
 
 #ifneq ("$(wildcard $(/usr/include/openssl/ssl.h))","")
