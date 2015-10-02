@@ -4,17 +4,10 @@ endif
 
 TARGET=		netsan.exe
 
-#TARGET+= ssl.exe
-#TARGET+= sun.exe
-
-ifdef WIN32
-TARGET+= ssls.exe
-TARGET+= sslc.exe
-else
+ifndef WIN32
 DAEMON=1
 endif
 
-#ifneq ("$(wildcard $(/usr/include/openssl/ssl.h))","")
 ifeq ("$(shell md5sum /usr/include/openssl/ssl.h 2>&1 > /dev/null;echo $$?)","0")
 SSL=1
 endif
@@ -37,6 +30,8 @@ LDFLAGS+=	$(LIBYACAPI)/lib/libyacapi.a -lws2_32
 endif
 
 ifdef SSL
+TARGET+= ssls.exe
+TARGET+= sslc.exe
 CFLAGS+=	-DHAVE_SSL
 CFLAGS+=	-DOPENSSL_NO_KRB5
 ifdef WIN32
@@ -78,3 +73,5 @@ test.crt:	test.key test.csr
 clean:
 	$(RM) $(TARGET) *.o
 
+clobber: clean
+	$(RM) *~
