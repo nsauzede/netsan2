@@ -23,10 +23,11 @@ LDFLAGS+=-static
 endif
 
 ifdef WIN32
-LIBYACAPI=	$(USR)
-CFLAGS+=	-I$(LIBYACAPI)/include/compat
-#LDFLAGS+=	-L$(LIBYACAPI)/lib -lyacapi -lws2_32
-LDFLAGS+=	$(LIBYACAPI)/lib/libyacapi.a -lws2_32
+YC=$(shell which yacapi-config)
+ifneq ("$(YC)","")
+CFLAGS+=`$(YC) --compat --cflags`
+LDFLAGS+=`$(YC) --static-libs`
+endif
 endif
 
 ifdef SSL
