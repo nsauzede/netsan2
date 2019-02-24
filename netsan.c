@@ -238,7 +238,7 @@ int main( int argc, char *argv[])
 			else if (!strcmp( argv[arg], ARG_HEX))
 			{
 				arg++;
-				sscanf( argv[arg++], "%d", &do_hex);
+				do_hex = 1;
 			}
 #ifdef HAVE_DAEMONIZE
 			else if (!strcmp( argv[arg], ARG_DAEMONIZE))
