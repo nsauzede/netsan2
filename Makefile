@@ -40,7 +40,7 @@ OPENSSL=	/c/OpenSSL-Win32
 CFLAGS+=	-I$(OPENSSL)/include
 LDFLAGS+=	$(OPENSSL)/lib/MinGW/libeay32.a $(OPENSSL)/lib/MinGW/ssleay32.a
 else
-LDFLAGS+=	-lssl
+LDFLAGS+=	-lssl -lcrypto
 endif
 endif
 
@@ -62,14 +62,14 @@ sslc:	CFLAGS+=-DOPENSSL_NO_KRB5
 
 all:	$(TARGET)
 
-test.key:
+key.pem:
 	openssl genrsa > $@
 
-test.csr:	test.key
-	openssl req -new -key test.key > $@
+certreq.pem:	key.pem
+	openssl req -new -key key.pem > $@
 
-test.crt:	test.key test.csr
-	openssl x509 -req -days 365 -in test.csr -signkey test.key -out $@
+cert.pem:	key.pem certreq.pem
+	openssl x509 -req -days 365 -in certreq.pem -signkey key.pem -out $@
 
 clean:
 	$(RM) $(TARGET) *.o

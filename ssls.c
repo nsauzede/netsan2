@@ -9,8 +9,8 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
-#define key_file 		"test.key"
-#define certificate_file 	"test.crt"
+#define key_file 		"key.pem"
+#define certificate_file 	"cert.pem"
 
 int main(int argc, char *argv[]) {
 	int port = 10001;
@@ -71,12 +71,8 @@ int main(int argc, char *argv[]) {
 									printf("failed to SSL read\n");
 							}
 							else {
-#ifdef WIN32
 								unsigned long err = ERR_get_error();
 								printf("failed to SSL accept (%d, %d) (%ld, %s)\n", n, SSL_get_error(ssl, n), err, ERR_error_string(err, NULL));
-#else
-								printf("failed to SSL accept (%d)\n", n);
-#endif
 							}
 						}
 						else

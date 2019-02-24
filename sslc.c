@@ -51,12 +51,8 @@ int main(int argc, char *argv[]) {
 							printf("SSL_write %d bytes\n", n);
 						}
 						else {
-#ifdef WIN32
 							unsigned long err = ERR_get_error();
 							printf("failed to SSL connect (%d, %d) (%ld, %s)\n", n, SSL_get_error(ssl, n), err, ERR_error_string(err, NULL));
-#else
-							printf("failed to SSL connect (%d)\n", n);
-#endif
 						}
 					}
 					else
