@@ -47,8 +47,10 @@ int main(int argc, char *argv[]) {
 
 							printf("ssl initiated\n");
 							n = snprintf(buf, sizeof(buf), "hello ssl\n");
-							n = SSL_write(ssl, buf, n);
-							printf("SSL_write %d bytes\n", n);
+							n = SSL_read(ssl, buf, sizeof(buf));
+							if (n > sizeof(buf) - 1)
+								n = sizeof(buf) - 1;
+							printf("SSL_read %d bytes : %s\n", n, buf);
 						}
 						else {
 							unsigned long err = ERR_get_error();
