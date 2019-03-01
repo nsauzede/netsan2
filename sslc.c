@@ -11,11 +11,15 @@
 
 int main(int argc, char *argv[]) {
 	int port = 10001;
+	char *host = "127.0.0.1";
 	int n;
 	int s;
 
 	if (argc > 1) {
-		sscanf(argv[1], "%d", &port);
+		host = argv[1];
+		if (argc > 2) {
+			sscanf(argv[2], "%d", &port);
+		}
 	}
 
 	SSL_library_init();
@@ -24,7 +28,6 @@ int main(int argc, char *argv[]) {
 	s = socket(PF_INET, SOCK_STREAM, 0);
 	if (s != -1) {
 		struct sockaddr_in sa;
-		char *host = "127.0.0.1";
 
 		memset(&sa, 0, sizeof(sa));
 		sa.sin_family = AF_INET;
